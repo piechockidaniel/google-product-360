@@ -1,0 +1,28 @@
+services:
+  gmc-manager:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_PATH: /app/data/gmc-manager.sqlite
+      GOOGLE_SERVICE_ACCOUNT_KEY_PATH: /run/secrets/service-account-key.json
+    volumes:
+      - ./data:/app/data
+      - ./service-account-key.json:/run/secrets/service-account-key.json:ro
+    ports:
+      - '127.0.0.1:8080:8080'
+
+  # Self-contained demo on synthetic data – no Google account, no secrets:
+  #   docker compose --profile demo up -d --build demo   ->  http://localhost:8081  (demo / demo1234)
+  demo:
+    profiles: ['demo']
+    build: .
+    restart: unless-stopped
+    environment:
+      DEMO_MODE: 'true'
+      DATABASE_PATH: /app/data/demo.sqlite
+      SESSION_SECRET: demo-only-session-secret-not-for-production
+    volumes:
+      - ./data:/app/data
+    ports:
+      - '127.0.0.1:8081:8080'
