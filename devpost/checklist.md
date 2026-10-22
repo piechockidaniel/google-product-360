@@ -92,3 +92,5 @@ Activity mode: [live app and editor, explicit static fallback, focused alternati
 
 ## Revisions
 
+- Added an explicit `OK` close action at the bottom of the product detail pane while retaining the top `X` and outside-click dismissal.
+

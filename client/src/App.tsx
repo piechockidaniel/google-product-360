@@ -202,6 +202,7 @@ export function App() {
             </article>)}
           </div>
           {activeOperation && activeOperation.productId === activeProduct.id && <section className="operation-panel"><div className="operation-heading"><div><p className="eyebrow">Operation trace</p><h4>{activeOperation.status === 'succeeded' ? 'Completed' : activeOperation.status === 'failed' ? 'Failed' : 'Running in background'}</h4></div><span className={`operation-status operation-${activeOperation.status}`}>{activeOperation.status}</span></div><p className="operation-message">{activeOperation.resultMessage ?? 'The app will keep monitoring this operation even if this window closes.'}</p><div className="trace-list">{activeOperation.events.map((event) => <div className="trace-event" key={event.id}><span className="trace-marker" /><div><strong>{event.type}</strong><span>{event.message}</span><time>{new Date(event.createdAt).toLocaleTimeString()}</time></div></div>)}</div></section>}
+          <div className="detail-footer"><button className="primary-button" type="button" onClick={() => setActiveProductId(null)}>OK</button></div>
         </aside>
       </>}
     </main>

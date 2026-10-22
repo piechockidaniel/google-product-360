@@ -110,6 +110,8 @@ input[type='checkbox'] { width: 15px; height: 15px; accent-color: #2e7650; }
 .operation-succeeded { background: #e5f3e9; color: #37815a; }
 .operation-failed { background: #fbe9e6; color: #ac5c4d; }
 .operation-message { margin: 15px 0; color: #526159; font-size: 12px; line-height: 1.45; }
+.detail-footer { display: flex; justify-content: flex-end; padding: 8px 0 20px; }
+.detail-footer .primary-button { min-width: 76px; }
 .trace-list { display: grid; gap: 13px; }
 .trace-event { display: grid; grid-template-columns: 13px 1fr; gap: 8px; }
 .trace-marker { width: 8px; height: 8px; margin-top: 3px; border-radius: 50%; background: #65a57e; box-shadow: 0 0 0 4px #e5f3e9; }
