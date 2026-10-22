@@ -8,7 +8,7 @@ import { DemoStore } from './store.js';
 
 const app = Fastify({ logger: true });
 const projectRoot = process.cwd();
-const databasePath = path.join(projectRoot, 'data', 'product360.sqlite');
+const databasePath = process.env.PRODUCT360_DB_PATH ?? path.join(projectRoot, 'data', 'product360.sqlite');
 const store = new DemoStore(databasePath);
 const scheduledOperations = new Set<string>();
 

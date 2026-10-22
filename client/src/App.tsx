@@ -44,27 +44,47 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!activeOperation || !activeStatuses.includes(activeOperation.status)) {
+    const operationId = activeOperation?.id;
+    if (!operationId || !activeOperation || !activeStatuses.includes(activeOperation.status)) {
       return undefined;
     }
 
-    const timer = window.setInterval(() => {
-      fetch(`/api/operations/${activeOperation.id}`)
-        .then((response) => response.json() as Promise<Operation>)
-        .then((operation) => {
-          setActiveOperation(operation);
-          if (!activeStatuses.includes(operation.status)) {
-            return refreshProducts();
-          }
-          return undefined;
-        })
-        .catch((error: unknown) => {
-          setActionError(error instanceof Error ? error.message : 'Unable to read operation state');
-        });
-    }, 700);
+    let cancelled = false;
+    const pollOperation = async () => {
+      const response = await fetch(`/api/operations/${operationId}`);
+      if (!response.ok) {
+        throw new Error(`Operation request failed with ${response.status}`);
+      }
+      const operation = await response.json() as Operation;
+      if (cancelled) {
+        return;
+      }
+      setActiveOperation(operation);
+      if (!activeStatuses.includes(operation.status)) {
+        const data = await loadProducts();
+        if (!cancelled) {
+          setProducts(data.products);
+          setMode(data.mode);
+        }
+      }
+    };
 
-    return () => window.clearInterval(timer);
-  }, [activeOperation]);
+    const pollWithErrorHandling = () => {
+      pollOperation().catch((error: unknown) => {
+        if (!cancelled) {
+          setActionError(error instanceof Error ? error.message : 'Unable to read operation state');
+        }
+      });
+    };
+
+    pollWithErrorHandling();
+    const timer = window.setInterval(pollWithErrorHandling, 700);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [activeOperation?.id, activeOperation?.status]);
 
   const activeProduct = products.find((product) => product.id === activeProductId) ?? null;
   const selectedCount = selectedIds.length;
