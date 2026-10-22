@@ -1,6 +1,7 @@
 /devpost/learner-profile.md
 node_modules/
 dist/
+data/
 .env
 .env.*
 !.env.example

@@ -3,102 +3,93 @@ import path from 'node:path';
 import fastifyStatic from '@fastify/static';
 import Fastify from 'fastify';
 
-import type { Product, ProductsResponse } from '../shared/types.js';
-
-const projectRoot = process.cwd();
-
-const demoProducts: Product[] = [
-  {
-    id: 'demo-wooden-kitchen-001',
-    title: 'Wooden Play Kitchen with Accessories',
-    supplier: 'Magia Zabawek',
-    feed: 'main-products.xml',
-    price: '649.00 PLN',
-    availability: 'In stock',
-    status: 'Limited',
-    issueSummary: 'Missing GTIN',
-    issues: [
-      {
-        code: 'missing_gtin',
-        title: 'Missing GTIN',
-        severity: 'warning',
-        predictable: true,
-      },
-    ],
-    thumbnailLabel: 'PK',
-    thumbnailColor: '#f5c26b',
-  },
-  {
-    id: 'demo-magnetic-blocks-002',
-    title: 'Magnetic Building Blocks — 64 Pieces',
-    supplier: 'Bright Blocks',
-    feed: 'main-products.xml',
-    price: '119.90 PLN',
-    availability: 'In stock',
-    status: 'Approved',
-    issueSummary: 'No active issues',
-    issues: [],
-    thumbnailLabel: 'MB',
-    thumbnailColor: '#9ed8c6',
-  },
-  {
-    id: 'demo-forest-puzzle-003',
-    title: 'Forest Animals Wooden Puzzle',
-    supplier: 'Little Forest',
-    feed: 'seasonal.tsv',
-    price: '44.50 PLN',
-    availability: 'Out of stock',
-    status: 'Disapproved',
-    issueSummary: 'Price mismatch · Landing page',
-    issues: [
-      {
-        code: 'price_mismatch',
-        title: 'Price does not match the landing page',
-        severity: 'error',
-        predictable: false,
-      },
-      {
-        code: 'landing_page',
-        title: 'Landing page cannot be verified',
-        severity: 'error',
-        predictable: false,
-      },
-    ],
-    thumbnailLabel: 'FP',
-    thumbnailColor: '#b8c8eb',
-  },
-  {
-    id: 'demo-cotton-rabbit-004',
-    title: 'Organic Cotton Rabbit Comforter',
-    supplier: 'Soft Nest',
-    feed: 'main-products.xml',
-    price: '79.00 PLN',
-    availability: 'In stock',
-    status: 'Limited',
-    issueSummary: 'Image quality',
-    issues: [
-      {
-        code: 'image_quality',
-        title: 'Image resolution is below the recommended threshold',
-        severity: 'warning',
-        predictable: true,
-      },
-    ],
-    thumbnailLabel: 'CR',
-    thumbnailColor: '#e8b7c7',
-  },
-];
+import type { Operation } from '../shared/types.js';
+import { DemoStore } from './store.js';
 
 const app = Fastify({ logger: true });
+const projectRoot = process.cwd();
+const databasePath = path.join(projectRoot, 'data', 'product360.sqlite');
+const store = new DemoStore(databasePath);
+const scheduledOperations = new Set<string>();
 
-app.get('/healthz', async () => ({ ok: true, mode: 'demo' }));
+function scheduleDemoOperation(operationId: string): void {
+  if (scheduledOperations.has(operationId)) {
+    return;
+  }
+
+  scheduledOperations.add(operationId);
+  setTimeout(() => {
+    try {
+      store.startOperation(operationId);
+      setTimeout(() => {
+        try {
+          store.completeOperation(operationId);
+        } catch (error) {
+          store.failOperation(operationId, error instanceof Error ? error.message : 'Demo operation failed.');
+        } finally {
+          scheduledOperations.delete(operationId);
+        }
+      }, 1200);
+    } catch (error) {
+      store.failOperation(operationId, error instanceof Error ? error.message : 'Demo operation failed.');
+      scheduledOperations.delete(operationId);
+    }
+  }, 250);
+}
+
+for (const operationId of store.getPendingOperationIds()) {
+  scheduleDemoOperation(operationId);
+}
+
+app.get('/healthz', async () => ({ ok: true, mode: 'demo', storage: 'sqlite' }));
 
 app.get('/api/mode', async () => ({ mode: 'demo' }));
 
-app.get('/api/products', async (): Promise<ProductsResponse> => ({
+app.get('/api/products', async () => ({
   mode: 'demo',
-  products: demoProducts,
+  products: store.listProducts(),
 }));
+
+app.get('/api/products/:productId', async (request, reply) => {
+  const { productId } = request.params as { productId: string };
+  const product = store.findProduct(productId);
+  if (!product) {
+    return reply.code(404).send({ error: 'Product not found' });
+  }
+  return product;
+});
+
+app.post('/api/operations', async (request, reply) => {
+  const body = request.body as { productId?: string; issueCode?: string } | undefined;
+  if (!body?.productId || !body.issueCode) {
+    return reply.code(400).send({ error: 'productId and issueCode are required' });
+  }
+
+  const product = store.findProduct(body.productId);
+  const issue = product?.issues.find((item) => item.code === body.issueCode);
+  if (!product || !issue) {
+    return reply.code(404).send({ error: 'Product issue not found' });
+  }
+  if (!issue.predictable || issue.classification !== 'quick-fix') {
+    return reply.code(422).send({ error: 'This issue requires user review and cannot use Quick Fix.' });
+  }
+  if (store.hasActiveOperation(product.id, issue.code)) {
+    return reply.code(409).send({ error: 'An operation for this issue is already running.' });
+  }
+
+  const operation = store.createOperation(product.id, issue.code);
+  scheduleDemoOperation(operation.id);
+  return reply.code(202).send(operation);
+});
+
+app.get('/api/operations/:operationId', async (request, reply): Promise<Operation | object> => {
+  const { operationId } = request.params as { operationId: string };
+  const operation = store.getOperation(operationId);
+  if (!operation) {
+    return reply.code(404).send({ error: 'Operation not found' });
+  }
+  return operation;
+});
 
 const clientDirectory = path.join(projectRoot, 'dist', 'client');
 app.register(fastifyStatic, {

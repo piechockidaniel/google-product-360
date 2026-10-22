@@ -54,6 +54,8 @@ th:last-child, td:last-child { padding-right: 21px; }
 input[type='checkbox'] { width: 15px; height: 15px; accent-color: #2e7650; }
 .product-cell { min-width: 280px; gap: 11px; }
 .product-cell strong { display: block; max-width: 250px; overflow: hidden; color: #24352b; font-size: 12px; font-weight: 700; text-overflow: ellipsis; }
+.product-title-button { display: block; max-width: 250px; overflow: hidden; padding: 0; border: 0; background: transparent; color: #24352b; font-size: 12px; font-weight: 700; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.product-title-button:hover { color: #32704c; text-decoration: underline; }
 .product-id { display: block; margin-top: 4px; color: #9aa69f; font-family: monospace; font-size: 10px; }
 .thumbnail { display: grid; flex: 0 0 auto; place-items: center; width: 39px; height: 39px; border-radius: 10px; color: #365343; font-size: 11px; font-weight: 700; }
 .feed-name { color: #637168; font-family: monospace; font-size: 11px; }
@@ -72,7 +74,47 @@ input[type='checkbox'] { width: 15px; height: 15px; accent-color: #2e7650; }
 .issue-summary:not(.issue-none)::before { content: '•'; margin-right: 5px; color: #d29a25; }
 .issue-none { color: #6d8575; }
 .row-action { padding: 7px 10px; border: 1px solid #bad6c4; background: #f2faf4; color: #32704c; }
+.row-action:disabled, .detail-action:disabled { cursor: wait; opacity: .55; }
+.action-error { padding: 10px 21px; border-bottom: 1px solid #f2d0c9; background: #fff3f0; color: #ac5c4d; font-size: 12px; }
 .empty-state { padding: 60px 21px; color: #718078; text-align: center; }
 .error-state { color: #ac5c4d; }
 .table-footer { display: flex; justify-content: space-between; padding: 15px 21px; border-top: 1px solid #e5ece8; color: #84918a; font-size: 11px; }
+.drawer-backdrop { position: fixed; z-index: 10; inset: 0; background: #1738293d; }
+.detail-pane { position: fixed; z-index: 11; top: 0; right: 0; bottom: 0; width: min(550px, 100vw); overflow-y: auto; padding: 28px; background: #fbfdfb; box-shadow: -12px 0 35px #1738291f; }
+.detail-header { display: flex; align-items: start; justify-content: space-between; gap: 20px; padding-bottom: 21px; border-bottom: 1px solid #dce6e0; }
+.detail-header h3 { max-width: 390px; margin: 0; font-size: 22px; line-height: 1.15; }
+.close-button { width: 32px; height: 32px; border: 1px solid #dce6e0; border-radius: 9px; background: #fff; color: #526159; font-size: 23px; line-height: 1; }
+.detail-meta { display: flex; align-items: center; gap: 12px; padding: 19px 0; color: #718078; font-size: 12px; }
+.detail-meta .product-id { margin: 0 0 5px; }
+.detail-section { padding-top: 6px; }
+.detail-section-heading, .operation-heading, .issue-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.detail-section-heading { margin-bottom: 11px; }
+.detail-section-heading h4, .operation-heading h4, .issue-card h4 { margin: 0; font-family: 'Space Grotesk', sans-serif; }
+.detail-section-heading span { color: #84918a; font-size: 12px; }
+.issue-card, .resolved-card, .operation-panel { margin-bottom: 12px; padding: 16px; border: 1px solid #dce6e0; border-radius: 12px; background: #fff; }
+.issue-card h4 { margin: 12px 0 15px; color: #24352b; font-size: 15px; }
+.issue-kind, .severity, .operation-status { display: inline-block; padding: 5px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
+.issue-kind-quick-fix { background: #e5f3e9; color: #37815a; }
+.issue-kind-review { background: #fbe9e6; color: #ac5c4d; }
+.severity-warning { color: #9a721f; }
+.severity-error { color: #ac5c4d; }
+.issue-card dl { margin: 0; }
+.issue-card dl div { display: grid; grid-template-columns: 90px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid #edf1ee; }
+.issue-card dt { color: #84918a; font-size: 11px; font-weight: 700; }
+.issue-card dd { margin: 0; color: #526159; font-size: 12px; line-height: 1.45; }
+.detail-action { width: 100%; margin-top: 15px; }
+.resolved-card { color: #37815a; font-size: 12px; }
+.operation-panel { border-color: #bad6c4; background: #f6fbf7; }
+.operation-heading h4 { margin-top: 4px; color: #24352b; font-size: 16px; }
+.operation-running, .operation-queued { background: #fff3d9; color: #9a721f; }
+.operation-succeeded { background: #e5f3e9; color: #37815a; }
+.operation-failed { background: #fbe9e6; color: #ac5c4d; }
+.operation-message { margin: 15px 0; color: #526159; font-size: 12px; line-height: 1.45; }
+.trace-list { display: grid; gap: 13px; }
+.trace-event { display: grid; grid-template-columns: 13px 1fr; gap: 8px; }
+.trace-marker { width: 8px; height: 8px; margin-top: 3px; border-radius: 50%; background: #65a57e; box-shadow: 0 0 0 4px #e5f3e9; }
+.trace-event div { display: grid; gap: 3px; }
+.trace-event strong { color: #355b43; font-size: 11px; text-transform: capitalize; }
+.trace-event span { color: #526159; font-size: 11px; line-height: 1.35; }
+.trace-event time { color: #9aa69f; font-size: 10px; }
 @media (max-width: 1200px) { .app-shell { padding-right: 24px; padding-left: 24px; } body { min-width: 960px; } }

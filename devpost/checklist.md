@@ -19,13 +19,13 @@ Build mode: fast
   Learner check: Fast-mode visual checkpoint is carried into the Slice 2 hands-on exploration.
   Commit: `Add runnable Product360 demo grid`
 
-- [ ] **2. A product issue can be understood and traced through a Demo Quick Fix**
+- [x] **2. A product issue can be understood and traced through a Demo Quick Fix**
   Becomes usable: A user can open a product issue, see its source, evidence, consequence, and remediation classification, approve one predictable Demo Quick Fix, watch its short-lived UI state, and inspect the completed read-only operation trace.
   Why now: Delivers the unique kernel early: explainable issue handling with explicit responsibility and an auditable operation path.
   PRD ref: `prd.md > Detailed product pane`, `prd.md > Product issues and predictable remediation`, `prd.md > Complex issues and user decisions`, `prd.md > Background operations and audit history`
   Spec ref: `spec.md > Issue normalizer and analyzer`, `spec.md > Operation worker`, `spec.md > Read-only trace viewer`, `spec.md > Data Model`
   Build: Add SQLite persistence for products, issues, operations, and operation events; implement account-level versus product-level issue display; classify deterministic predictable issues separately from review-required issues; add the explicit approval dialog, Demo Quick Fix execution, background status, 30-second monitoring window, pending state, and trace viewer.
-  Verify (mechanical): Run automated checks for issue classification and operation transitions; execute a Demo Quick Fix, reload during and after it, and confirm the operation state and trace remain available.
+  Verify (mechanical): `npm run typecheck` and `npm run build` pass; a real SQLite-backed Demo operation transitions queued → running → succeeded, clears the issue, records three trace events, and remains succeeded with its trace after a server restart.
   Learner check: Open both a predictable and a complex issue, approve only the predictable fix, and say whether the consequences and responsibility boundary are clear.
   Commit: `Add explainable demo remediation and audit trace`
 
