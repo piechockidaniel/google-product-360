@@ -1,0 +1,16 @@
+# /etc/systemd/system/gmc-manager.service
+[Unit]
+Description=GMC Manager (Google Merchant Center manager)
+After=network.target
+
+[Service]
+Type=simple
+User=gmc
+WorkingDirectory=/opt/gmc-manager
+EnvironmentFile=/opt/gmc-manager/.env
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning dist/server/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

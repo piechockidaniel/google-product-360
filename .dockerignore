@@ -1,0 +1,11 @@
+node_modules
+client/node_modules
+dist
+data
+.env
+.env.*
+service-account-key.json
+*.sqlite*
+coverage
+test-results/
+playwright-report/
