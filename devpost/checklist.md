@@ -40,11 +40,12 @@ Build mode: fast
   Commit: `Add persistent remediation patterns and feed import`
 
 - [ ] **4. Google OAuth setup verifies readiness without storing secrets in the browser**
+  Current implementation note: Google OAuth operator login is implemented. This checklist item remains open because the current POC uses a protected service account for Merchant API access rather than storing a Google OAuth refresh credential for background API work.
   Becomes usable: A user can sign in with Google, complete the in-app setup gate, and see precise readiness results for the required Google services before any live sync begins.
   Why now: Resolves the highest-risk live integration boundary while the Demo journey remains available as a fallback.
   PRD ref: `prd.md > Google sign-in`, `prd.md > Setup wizard`, `prd.md > Authentication and setup gate`, `prd.md > Product Decisions`
   Spec ref: `spec.md > OAuth and session routes`, `spec.md > Setup readiness service`, `spec.md > External Services and Dependencies`, `spec.md > Important Failure Modes`
-  Build: Add server-side OAuth authorization-code flow with PKCE as applicable, encrypted refresh-token storage using `APP_ENCRYPTION_KEY`, opaque HttpOnly Secure SameSite session cookies, setup progress checks, exact failure explanations, and a Demo/live mode boundary; do not accept or persist service-account JSON in the app.
+  Build: Add direct OAuth authorization for Merchant API access, encrypted refresh-token storage, opaque HttpOnly Secure SameSite session cookies, setup progress checks, exact failure explanations, and a Demo/live mode boundary; the current service-account path remains the supported POC fallback.
   Verify (mechanical): Run security-oriented tests for cookie flags, token encryption/decryption, missing-key failure, and setup-state transitions; confirm no token or key appears in client responses, logs, or tracked files.
   Learner check: Walk through the setup wizard with Demo mode and inspect each readiness explanation; if live credentials are unavailable, review the explicit blocked state rather than bypassing it.
   Commit: `Add secure Google OAuth setup gate`

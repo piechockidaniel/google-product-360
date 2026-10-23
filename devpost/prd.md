@@ -13,8 +13,8 @@ Source: `scope.md > The Unique Kernel`, `scope.md > Who It's For`.
 Source: `scope.md > The Core Loop`, `scope.md > What "Working" Looks Like`.
 
 1. The operator opens Product360 and signs in with Google.
-2. Product360 opens a setup wizard that requests Merchant API authorization through Google OAuth.
-3. The wizard validates the granted access and checks the Google access and API prerequisites needed for synchronization. It shows progress as each check runs.
+2. Product360 opens a setup wizard that collects the Merchant Center service-account details used for API access.
+3. The wizard validates the service-account access and checks the Google API prerequisites needed for synchronization. It shows progress as each check runs.
 4. If any check fails, the wizard stops. It identifies the core cause, explains the consequence, and shows the next available remedy. No partial synchronization or remediation is started.
 5. When every check succeeds, Product360 synchronizes the available product and account state, opens the product grid, and shows a success toast.
 6. The operator reviews product rows and account-level diagnostics. Product issues remain attached to their products; account issues are shown separately as account-wide impact.
@@ -35,7 +35,7 @@ The entry surface lets the operator authenticate with Google. No product operati
 
 The wizard is the first post-login surface. It contains:
 
-- Google OAuth consent for Merchant API access.
+- Google OAuth operator login and service-account access for Merchant API operations.
 - Validation and prerequisite-check progress.
 - A clear result for each check.
 - A blocking error presentation when a check fails, including the core cause, impact, and available next step.
@@ -78,11 +78,10 @@ Product360 should feel Vite-inspired: clean, fast, lightweight, technical, and a
 Source: `scope.md > The Core Loop`, `scope.md > The POC Boundary`.
 
 - The operator signs in with Google before accessing product data.
-- The wizard starts Google OAuth consent for the Merchant API scope.
-- The wizard validates the input and runs the required access checks with visible progress.
+- The wizard completes Google OAuth operator login, validates the service-account input, and runs the required access checks with visible progress.
 - A failed check blocks the rest of the workflow. The message identifies the root cause, consequence, and available remediation.
 - The app does not start partial synchronization or remediation after a failed setup check.
-- Google refresh credentials are retained only on the server in protected storage and are never placed in browser storage, audit history, or source control.
+- Google OAuth identity data and service-account credentials are handled server-side and are never placed in browser storage, audit history, or source control.
 
 Acceptance criteria:
 
@@ -183,7 +182,7 @@ Acceptance criteria:
 ## Product Decisions
 
 - The setup wizard is a hard gate — partial synchronization and partial remediation would make the initial state ambiguous.
-- OAuth authorization is the primary connection path — it avoids service-account key handling and better supports a generic product for multiple businesses.
+- Google OAuth is the primary operator login — Merchant API background work uses the protected service-account path in this POC; direct OAuth API authorization remains a later option.
 - Product360 writes fixes through a supplemental API data source — the original feed remains the source being diagnosed and is not overwritten.
 - A user-approved correction can become a persistent pattern — the product can reuse a validated decision without requiring the user to repeat it.
 - The POC accepts uncompressed `.txt`, `.tsv`, and `.xml` product files — these are the supported first input formats; compressed files are deferred.

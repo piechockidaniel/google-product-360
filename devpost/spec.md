@@ -9,7 +9,7 @@ status: approved
 
 Product360 is one Node application with two visible parts: a React page in the browser and a Fastify server that does the protected work.
 
-The browser never receives Google refresh credentials. It receives an ordinary application session cookie. The server sends the user through Google OAuth, stores the returned refresh credential encrypted in SQLite, and uses Google’s official libraries to obtain short-lived access tokens whenever a background operation needs them.
+The browser never receives Google credentials. It receives an ordinary application session cookie. The server sends the user through Google OAuth for operator identity, while the setup wizard provisions a protected service-account credential for Merchant API and Search Console background work.
 
 The server has two data providers. Live mode reads and writes Merchant API data. Demo mode reads clearly labeled synthetic data from local fixtures and follows the same product, issue, remediation, pattern, operation, and audit flow. Demo mode proves the experience without pretending that Google was contacted.
 
@@ -24,9 +24,9 @@ An approved user decision can become a persistent pattern. The pattern describes
 PRD ref: `prd.md > The Core Journey`.
 
 1. The browser requests Google sign-in from the Fastify server.
-2. Fastify redirects to Google OAuth with the Merchant API scope. Google returns an authorization code to the server callback.
-3. The server exchanges the code, encrypts the refresh credential with `APP_ENCRYPTION_KEY`, stores it in `connections`, and creates an application session in an `HttpOnly`, `Secure`, `SameSite` cookie.
-4. The setup wizard calls the server for prerequisite checks. The server uses the official Accounts, Data Sources, Products, and issue-related clients; demo mode uses the fixture provider instead.
+2. Fastify redirects to Google OAuth for `openid`, `email`, and `profile`. Google returns an authorization code to the server callback.
+3. The server verifies the Google identity, creates an application session in an `HttpOnly`, `Secure`, `SameSite` cookie, and does not store Google OAuth tokens.
+4. The setup wizard collects the service-account JSON and Merchant Center account id, then calls the server for prerequisite checks. The server uses the configured Merchant API access; demo mode uses the fixture provider instead.
 5. A failed check creates a failed setup event and returns a blocking, root-cause-oriented result. No sync or write operation is started.
 6. A successful check starts a synchronization operation. The worker lists processed products, account issues, data sources, and relevant product status data, normalizes them, and stores the current snapshot in SQLite.
 7. The browser requests the grid view. Fastify reads the normalized snapshot, separates account-level issues from product-level issues, applies filters, and returns the grid model.
@@ -40,11 +40,11 @@ PRD ref: `prd.md > The Core Journey`.
 - **Server:** Fastify. It serves the production client build, exposes JSON routes, validates requests, and owns OAuth, Google calls, persistence, and workers.
 - **Client:** React with Vite. Development uses the Vite dev server; production uses the built client served by Fastify.
 - **Database:** SQLite through `node:sqlite`. JSON columns hold preserved Google payloads and evidence where a fully normalized field is not needed.
-- **Google authentication:** `google-auth-library` with OAuth web-server flow and refresh-token support.
-- **Google API access:** Official Node.js Merchant API clients for Accounts, Products, Data Sources, Reports, Notifications, and supported issue services. A small adapter hides generated client types from the rest of the app.
-- **Encryption:** Node `node:crypto` using authenticated encryption for the stored refresh credential. No native encryption module is required.
+- **Google authentication:** `google-auth-library` with OAuth web-server flow for operator identity and JWT service-account tokens for API work.
+- **Google API access:** Typed REST facades over the official Merchant API and Search Console HTTP APIs. The adapter hides endpoint details and keeps the rest of the app independent of Google wire formats.
+- **Encryption:** Node `node:crypto` using authenticated encryption for the stored service-account credential. No native encryption module is required.
 - **Validation:** TypeScript types plus Fastify route schemas. No general-purpose state or UI framework is required for the POC.
-- **Tests:** Node’s built-in test runner for server/domain behavior and a focused browser smoke path for the demo journey.
+- **Tests:** Vitest for server/domain behavior and a focused Playwright browser smoke path for the demo journey.
 
 Documentation: [Node.js](https://nodejs.org/docs/latest-v22.x/api/), [`node:sqlite`](https://nodejs.org/api/sqlite.html), [Fastify](https://fastify.dev/docs/latest/), [React](https://react.dev/), [Vite](https://vite.dev/guide/), [Google OAuth for Node](https://github.com/googleapis/google-auth-library-nodejs), [Merchant API Node.js clients](https://developers.google.com/merchant/api/client-libraries/nodejs).
 
@@ -56,8 +56,8 @@ Required runtime:
 
 - Node.js `22.13` or newer for local development.
 - A writable SQLite database path.
-- `APP_ENCRYPTION_KEY` for encrypting OAuth refresh credentials.
-- Live mode: Google OAuth client ID, client secret, registered callback URL, and the Merchant API enabled in the Google Cloud project.
+- `SESSION_SECRET` for signing sessions and encrypting the stored service-account credential.
+- Live mode: Google OAuth client ID, client secret, registered callback URL, a Merchant API-enabled Google Cloud project, and a service-account key accepted by the Merchant Center account.
 - Demo mode: no Google credentials; synthetic data is loaded from `server/demo/fixtures/` and every relevant screen carries a `DEMO DATA` label.
 
 Development commands:
@@ -147,9 +147,9 @@ PRD ref: `prd.md > States and Boundaries`, `prd.md > What We're Building`.
 
 The database is local SQLite. Every durable record includes timestamps and a mode (`demo` or `live`) where relevant.
 
-### `connections`
+### `users`, `settings`, and `oauth_states`
 
-Stores the Google subject identifier, Merchant Center account identifier, mode, encrypted refresh credential, encryption version, connection status, and last verification time. The access token is never stored. The server decrypts the refresh credential only while creating a Google client.
+`users` stores the local shadow identity, including the verified Google subject and e-mail when the user signs in with Google. `settings` stores the encrypted service-account credential and Merchant Center account configuration. `oauth_states` stores short-lived state and PKCE material only while the OAuth callback is pending; Google OAuth tokens are not stored.
 
 ### `sessions`
 
@@ -175,7 +175,7 @@ Stores the operation type, mode, affected scope, parent pattern, status, correla
 
 Append-only trace rows with operation ID, sequence, event type, redacted payload, severity, timestamp, and optional external resource reference. Events are read-only in the UI.
 
-When the browser closes, all product, pattern, operation, and event state remains in SQLite. A server restart preserves everything except in-memory access tokens; the encrypted refresh credential obtains a new access token when the worker resumes.
+When the browser closes, all product, pattern, operation, and event state remains in SQLite. A server restart preserves the encrypted service-account credential and durable operation state; the worker obtains fresh short-lived service-account access tokens when it resumes.
 
 ## File Structure
 
@@ -231,7 +231,7 @@ product-360-with-extras/
 
 ### Google OAuth 2.0
 
-The server uses the web-server OAuth flow and requests the Merchant API scope `https://www.googleapis.com/auth/content`. Access tokens are short-lived; the encrypted refresh credential is used to obtain new ones. The OAuth client ID, client secret, and callback URL are deployment inputs, not user-entered product settings.
+The server uses the web-server OAuth flow for operator identity and requests only `openid`, `email`, and `profile`. Merchant API and Search Console access use the protected service-account credential supplied through the setup wizard. OAuth client settings and the callback URL are deployment inputs, not user-entered product settings.
 
 Docs: [Merchant API authentication](https://developers.google.com/merchant/api/guides/quickstart/authentication?hl=en), [third-party authorization](https://developers.google.com/merchant/api/guides/authorization/access-client-accounts?hl=en), [Google OAuth 2.0](https://developers.google.com/identity/protocols/oauth2/).
 
@@ -272,7 +272,7 @@ Demo mode has no external service. Fixtures must include at least one predictabl
 
 ## Important Failure Modes
 
-- **OAuth denied or refresh credential invalid** → keep the user in setup, show the cause and reauthorization action, and do not start sync.
+- **OAuth denied or service-account access invalid** → keep the user in setup, show the cause and reauthorization or credential action, and do not start sync.
 - **Google API access or data source unavailable** → block the dependent operation, record the trace, show the exact supported next step, and do not silently fall back to a write.
 - **Google processing exceeds 30 seconds** → persist `GOOGLE_PROCESSING`, unlock only non-conflicting scopes, and reconcile later without requiring the browser to remain open.
 - **Feed file malformed or unsupported** → preserve import metadata, identify the first actionable parsing problem, and do not send partial live writes.
@@ -290,15 +290,15 @@ Demo mode has no external service. Fixtures must include at least one predictabl
 
 ## Decisions and Open Issues
 
-- **OAuth is primary** — it fits a generic product that may manage multiple businesses and avoids service-account key upload.
-- **Refresh credentials are encrypted server-side** — browser storage is not trusted for credentials; the encryption key is a deployment secret.
+- **OAuth is the primary operator login** — it gives the app a verified human identity without putting Google credentials in browser storage.
+- **Service-account credentials are encrypted server-side** — headless API work continues independently of the browser session.
 - **Official Google clients are primary** — they reduce auth and pagination mistakes; the adapter keeps the rest of the app stable.
 - **Demo and live providers share one interface** — the synthetic path is clearly labeled and never presented as live evidence.
 - **Supplemental API data source is the write target** — the original file feed is preserved.
 - **Approved patterns persist** — a user decision can be reused across future synchronizations, with explicit enable/disable control.
 - **Trace is read-only but visible** — operators can inspect the full path without editing evidence.
 
-The learner’s useful uncertainty was whether browser local storage or cookies could safely retain the Google credential. That was clarified by separating browser session cookies from server-held encrypted refresh credentials; browser storage will not contain Google credentials.
+The learner’s useful uncertainty was whether browser local storage or cookies could safely retain the Google credential. That was clarified by separating the browser session cookie from server-held identity and service-account material; browser storage will not contain Google credentials.
 
 Open issues before implementation:
 

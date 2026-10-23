@@ -17,7 +17,7 @@ The first user is the learner's wife, who runs a small ecommerce business. She n
 
 ## The Core Loop
 
-The operator authenticates with Google OAuth, grants Product360 Merchant API access, and Product360 verifies the required access before synchronizing product and account state. The server keeps the authorized connection available for background work without requiring the operator to upload a service-account key. The operator opens the product grid, finds failed products, reads their issues and suggested remedy, applies an available action when appropriate, and returns later to see what changed and why it was recorded.
+The operator authenticates with Google OAuth. The setup wizard then collects and verifies the Merchant Center service-account access used for background API work before synchronizing product and account state. The operator opens the product grid, finds failed products, reads their issues and suggested remedy, applies an available action when appropriate, and returns later to see what changed and why it was recorded.
 
 ## Inspiration & Identity
 
@@ -34,7 +34,7 @@ In a short on-screen demo, the operator logs in, initializes product state, open
 ## The POC Boundary
 
 - Google OAuth login for the operator.
-- A setup wizard that completes Google OAuth consent, validates required access, and stores only a protected server-side refresh credential for background work.
+- A setup wizard that completes Google OAuth login, validates the Merchant Center service-account access required for background work, and keeps credentials server-side.
 - Initial product synchronization from the relevant Merchant Center product/feed API surface.
 - A product grid showing current status and issues for synchronized products.
 - One clearly defined issue-to-remediation path, with a safe dry-run fallback if a live write is not appropriate for the first build.
@@ -55,5 +55,5 @@ In a short on-screen demo, the operator logs in, initializes product state, open
 - A complete Merchant Center replacement: it would obscure the small experiment and exceed the hackathon time budget.
 - Multiple automated remediation types: one path is enough to prove the kernel and keeps write-side risk manageable.
 - Full analytics and AI pattern discovery: valuable later, but the first proof must establish reliable product state, issues, action, and audit history first.
-- Service-account credential setup as the primary operator flow: OAuth is the POC path; service accounts remain a later in-house/deployment mode.
+- Direct OAuth-granted Merchant API access in the first live slice: the current POC uses Google OAuth for operator identity and a protected service account for headless Merchant API work; direct OAuth API authorization remains a later option.
 - Automatic in-app resolution of every Google account issue: Google controls which issue-resolution actions are available to third-party applications.

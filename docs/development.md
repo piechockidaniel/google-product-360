@@ -10,8 +10,8 @@ instance is described in [operations.md](operations.md), the screens in the
 ## 1. Stack & principles
 
 * **Server**: Node 22, TypeScript (ESM, `NodeNext`), Fastify 5, zod, `node:sqlite` (built in –
-  no native modules), croner for cron, google-auth-library for service-account tokens. One
-  process, one SQLite database.
+  no native modules), croner for cron, and google-auth-library for operator OAuth and
+  service-account tokens. One process, one SQLite database.
 * **Client**: React 19, Vite, react-router, @dnd-kit (visual workflow builder). No UI framework,
   no chart library – small hand-written components and SVG charts. Built into `dist/client` and
   served by Fastify.
@@ -39,12 +39,13 @@ server/src
   app.ts               dependency wiring (AppContext) + reactions to settings changes
   config/              environment schema (zod)
   db/                  Database wrapper (statement cache, transactions) + migrations
-  google/              auth (service account, per-API scopes), rest-client, merchant-api, search-console-api, types
+  google/              auth (OAuth/service account, per-API scopes), rest-client, merchant-api, search-console-api, types
   mock/                MockMerchantApi, synthetic reports (mock-reports), MockSearchConsoleApi
   connectors/          Product360 metric sources: Connector interface, merchant-reports, search-console
-  services/            product-store, sync-service, enrichment-service, feed-service, account-service,
-                       notification-service, auth-service, settings-service, event-log, attribute-catalog,
-                       metrics-store, metrics-sync-service, signals-service, product360-service
+  services/            product-store, sync-service, enrichment-service, remediation-service, feed-service,
+                       account-service, notification-service, auth-service, google-oauth-service,
+                       settings-service, event-log, attribute-catalog, metrics-store, metrics-sync-service,
+                       signals-service, product360-service
   workflows/           schema (zod), conditions, engine, scheduler, templates, workflow-store
   jobs/                sync-scheduler (interval), metrics-scheduler (cron)
   http/                server.ts (Fastify, sessions, error mapping) + routes/*
