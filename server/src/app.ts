@@ -16,6 +16,7 @@ import { MockMerchantApi } from './mock/mock-merchant-api.js';
 import { AccountIssueStore } from './services/account-issue-store.js';
 import { AccountService } from './services/account-service.js';
 import { AuthService } from './services/auth-service.js';
+import { GoogleOAuthService } from './services/google-oauth-service.js';
 import { EnrichmentService } from './services/enrichment-service.js';
 import { EventLog } from './services/event-log.js';
 import { FeedService } from './services/feed-service.js';
@@ -24,6 +25,7 @@ import { MetricsSyncService } from './services/metrics-sync-service.js';
 import { NotificationService } from './services/notification-service.js';
 import { Product360Service } from './services/product360-service.js';
 import { ProductStore } from './services/product-store.js';
+import { RemediationService } from './services/remediation-service.js';
 import { SignalsService } from './services/signals-service.js';
 import { CONNECTION_KEYS, SettingsService, type MerchantSettings } from './services/settings-service.js';
 import { SyncService } from './services/sync-service.js';
@@ -43,6 +45,7 @@ export interface AppContext {
   /** The mock implementation when one is active (MERCHANT_MOCK / mock setting). */
   readonly mock: MockMerchantApi | null;
   auth: AuthService;
+  oauth: GoogleOAuthService;
   events: EventLog;
   products: ProductStore;
   accountIssues: AccountIssueStore;
@@ -61,6 +64,7 @@ export interface AppContext {
   metricsScheduler: MetricsScheduler;
   signals: SignalsService;
   product360: Product360Service;
+  remediations: RemediationService;
   searchConsole: SearchConsoleConnector;
   /** Current Search Console API implementation (follows the settings). */
   searchConsoleApi(): SearchConsoleApi;
@@ -100,6 +104,7 @@ export function buildApp(config: AppConfig, logger: Logger, options: BuildOption
   }
 
   const auth = new AuthService(db, config.SESSION_TTL_HOURS);
+  const oauth = new GoogleOAuthService(config.GOOGLE_OAUTH_CLIENT_ID, config.GOOGLE_OAUTH_CLIENT_SECRET, config.GOOGLE_OAUTH_REDIRECT_URI);
   const events = new EventLog(db);
   const products = new ProductStore(db);
   const accountIssues = new AccountIssueStore(db);
@@ -157,6 +162,7 @@ export function buildApp(config: AppConfig, logger: Logger, options: BuildOption
   );
   metricsSync.register(searchConsole);
   const product360 = new Product360Service(products, metrics, signals, metricsSync, () => searchConsole.isConfigured());
+  const remediations = new RemediationService(db, products, enrichment, sync, events, logger);
   const metricsScheduler = new MetricsScheduler(
     metricsSync,
     { enabled: settings.current().metricsEnabled, cron: settings.current().metricsSyncCron, timezone: settings.current().timeZone },
@@ -218,6 +224,7 @@ export function buildApp(config: AppConfig, logger: Logger, options: BuildOption
       return current instanceof MockMerchantApi ? current : null;
     },
     auth,
+    oauth,
     events,
     products,
     accountIssues,
@@ -235,6 +242,7 @@ export function buildApp(config: AppConfig, logger: Logger, options: BuildOption
     metricsScheduler,
     signals,
     product360,
+    remediations,
     searchConsole,
     searchConsoleApi: () => searchConsoleApi,
     buildApi,
@@ -242,12 +250,15 @@ export function buildApp(config: AppConfig, logger: Logger, options: BuildOption
       workflows.failStaleRuns();
       metrics.failStaleRuns();
       auth.pruneExpiredSessions();
+      auth.pruneOAuthStates();
       scheduler.start();
+      remediations.start();
       syncScheduler.start(settings.current().syncOnStartup);
       metricsScheduler.start(settings.current().syncOnStartup);
     },
     async stop() {
       scheduler.stop();
+      remediations.stop();
       syncScheduler.stop();
       metricsScheduler.stop();
       db.close();

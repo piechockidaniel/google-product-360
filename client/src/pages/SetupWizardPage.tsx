@@ -21,7 +21,7 @@ export default function SetupWizardPage() {
   const navigate = useNavigate();
   const notify = useToast();
   const { t } = useI18n();
-  const steps = useMemo(() => (needsAdmin || !user ? ALL_STEPS : ALL_STEPS.filter((s) => s !== 'admin')), [needsAdmin, user]);
+  const steps = useMemo(() => (needsAdmin ? ALL_STEPS : ALL_STEPS.filter((s) => s !== 'admin')), [needsAdmin]);
   const [stepIndex, setStepIndex] = useState(0);
   const [settings, setSettings] = useState<PublicSettings | null>(null);
   const [error, setError] = useState<string | null>(null);

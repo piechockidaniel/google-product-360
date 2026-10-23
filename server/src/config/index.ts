@@ -26,6 +26,12 @@ const schema = z.object({
   /** Bootstrap admin user; created on first start if the users table is empty. */
   ADMIN_USERNAME: z.string().default('admin'),
   ADMIN_PASSWORD: z.string().optional(),
+  /** Google OIDC web client used only to authenticate operators. */
+  GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_OAUTH_REDIRECT_URI: z.string().url().optional(),
+  /** Keep local password login opt-in; DEMO_MODE enables it automatically. */
+  LOCAL_LOGIN_ENABLED: boolish.default(false),
 
   /** Google Merchant Center */
   MERCHANT_ACCOUNT_ID: z.string().default(''),
@@ -81,7 +87,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (!env.DATABASE_PATH) cfg.DATABASE_PATH = './data/demo.sqlite';
     if (!env.ADMIN_USERNAME) cfg.ADMIN_USERNAME = 'demo';
     if (!env.ADMIN_PASSWORD) cfg.ADMIN_PASSWORD = 'demo1234';
+    cfg.LOCAL_LOGIN_ENABLED = true;
   }
+  if (cfg.ADMIN_PASSWORD || cfg.NODE_ENV !== 'production') cfg.LOCAL_LOGIN_ENABLED = true;
   return {
     ...cfg,
     rootDir,

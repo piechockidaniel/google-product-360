@@ -9,6 +9,30 @@ You need: admin access to the Merchant Center account, and a Google account that
 can create a Google Cloud project (any Google account works; it does not have to
 be the one used for Merchant Center).
 
+## Operator login – Google OAuth
+
+Production installations use Google OAuth for the operator session. This is
+separate from the service account: OAuth proves who is using the app, while the
+service account performs scheduled Merchant API and Search Console work on the
+server. The app does not store Google OAuth refresh tokens or service-account
+private keys in the browser.
+
+1. In Google Cloud → **APIs & Services → OAuth consent screen**, configure the
+   application and add the operator account as a test user if the app is not
+   published.
+2. Create an **OAuth client ID → Web application**.
+3. Add this exact authorized redirect URI:
+   `https://YOUR_PUBLIC_HOST/api/auth/google/callback`.
+4. Put the client ID, client secret, and the same redirect URI in the server
+   environment as `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and
+   `GOOGLE_OAUTH_REDIRECT_URI`.
+
+The login page then shows **Continue with Google**. Only after Google login
+does the setup wizard ask for the Merchant Center service-account key and
+account id. Keep `LOCAL_LOGIN_ENABLED=false` in production; it is enabled
+automatically by the synthetic demo and may be enabled deliberately for local
+development.
+
 The Merchant API needs **four** things, and all four must be in place –
 any one of them missing produces an error that looks like a credentials problem:
 

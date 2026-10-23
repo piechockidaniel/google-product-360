@@ -85,6 +85,13 @@ export const pl: Record<TranslationKey, string> = {
   'login.submit': 'Zaloguj',
   'login.busy': 'Logowanie…',
   'login.failed': 'Logowanie nie powiodło się',
+  'login.google': 'Kontynuuj z Google',
+  'login.orLocal': 'lub użyj lokalnego konta administratora',
+  'login.noProvider': 'Nie skonfigurowano dostawcy logowania. Skonfiguruj Google OAuth na serwerze.',
+  'login.error.google_denied': 'Logowanie przez Google zostało anulowane.',
+  'login.error.google_invalid_callback': 'Google zwrócił nieprawidłowe przekierowanie.',
+  'login.error.google_expired': 'Sesja logowania Google wygasła. Spróbuj ponownie.',
+  'login.error.google_failed': 'Logowanie przez Google nie powiodło się. Sprawdź konfigurację serwera.',
 
   // ---- statuses / levels
   'status.APPROVED': 'Zatwierdzony',
@@ -189,6 +196,14 @@ export const pl: Record<TranslationKey, string> = {
   // ---- product detail
   'detail.refresh': 'Odśwież z Google',
   'detail.refreshed': 'Produkt odświeżony z Google',
+  'detail.close': 'Zamknij szczegóły produktu',
+  'detail.quickFix': 'Zatwierdź i uruchom Quick Fix',
+  'detail.quickFixAvailable': 'Dostępny bezpieczny Quick Fix',
+  'detail.quickFixRunning': 'Wysyłanie…',
+  'detail.quickFixQueued': 'Quick Fix dodany do kolejki; Google przetwarza zmianę w tle.',
+  'detail.quickFixConfirm': 'Wysłać deterministyczną zmianę tytułu „{value}” do Google przez źródło uzupełniające?',
+  'detail.operationTrace': 'Ślad operacji',
+  'detail.operationRunning': 'Operacja działa niezależnie od tego okna.',
   'detail.landingPage': 'strona produktu',
   'detail.deleted': 'usunięty z konta {ago}',
   'detail.dataSource': 'Źródło danych',

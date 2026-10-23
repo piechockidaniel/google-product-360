@@ -38,7 +38,7 @@ cp .env.example .env          # set SESSION_SECRET (openssl rand -hex 32); the r
 npm start                     # builds server + client, serves http://localhost:8080
 ```
 
-The setup wizard opens on first start: administrator → Merchant Center connection (service-account
+The setup wizard opens after Google OAuth login: Merchant Center connection (service-account
 key, *Test connection* with explanations) → sync & notifications → enrichment → done. Google-side
 prerequisites are listed in [docs/operations.md](docs/operations.md#4-google-side-setup).
 

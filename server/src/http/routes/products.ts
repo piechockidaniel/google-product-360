@@ -48,6 +48,8 @@ const bulkSchema = z.object({
   removeTags: z.array(z.string()).optional(),
 });
 
+const remediationSchema = z.object({ issueCode: z.string().min(1) });
+
 export function registerProductRoutes(app: FastifyInstance, ctx: AppContext): void {
   app.get('/products', async (request) => {
     const query = listQuerySchema.parse(request.query);
@@ -114,6 +116,26 @@ export function registerProductRoutes(app: FastifyInstance, ctx: AppContext): vo
       issues: ctx.products.listIssues({ productName: product.name, limit: 500 }).items,
       events: ctx.events.list({ limit: 100 }).items.filter((e) => e.productName === product.name),
     };
+  });
+
+  app.get<{ Params: { id: string } }>('/products/:id/remediations', async (request) => {
+    const product = ctx.products.getProductByEncodedId(request.params.id);
+    if (!product) throw notFound('Product not found in local snapshot');
+    return { proposals: ctx.remediations.proposals(product.name), operations: ctx.remediations.list(product.name) };
+  });
+
+  app.post<{ Params: { id: string } }>('/products/:id/remediations', async (request, reply) => {
+    const product = ctx.products.getProductByEncodedId(request.params.id);
+    if (!product) throw notFound('Product not found in local snapshot');
+    const body = remediationSchema.parse(request.body);
+    const operation = ctx.remediations.create(product.name, body.issueCode);
+    return reply.status(202).send(operation);
+  });
+
+  app.get<{ Params: { operationId: string } }>('/remediations/:operationId', async (request) => {
+    const operation = ctx.remediations.get(request.params.operationId);
+    if (!operation) throw notFound('Remediation operation not found');
+    return operation;
   });
 
   app.put<{ Params: { id: string } }>('/products/:id/metadata', async (request) => {

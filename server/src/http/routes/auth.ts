@@ -33,7 +33,45 @@ class LoginThrottle {
 
 export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void {
   const throttle = new LoginThrottle();
+  app.get('/auth/providers', async () => ({
+    google: ctx.oauth.configured,
+    local: ctx.config.LOCAL_LOGIN_ENABLED || ctx.config.DEMO_MODE,
+    demo: ctx.config.DEMO_MODE,
+  }));
+
+  app.get('/auth/google/start', async (_request, reply) => {
+    if (!ctx.oauth.configured) throw new HttpError(503, 'Google OAuth is not configured on this installation');
+    const started = ctx.oauth.start();
+    ctx.auth.createOAuthState(started.state, started.codeVerifier);
+    return reply.redirect(started.url);
+  });
+
+  app.get<{ Querystring: { code?: string; state?: string; error?: string } }>('/auth/google/callback', async (request, reply) => {
+    if (request.query.error) return reply.redirect('/?auth_error=google_denied');
+    if (!request.query.code || !request.query.state) return reply.redirect('/?auth_error=google_invalid_callback');
+    const verifier = ctx.auth.consumeOAuthState(request.query.state);
+    if (!verifier) return reply.redirect('/?auth_error=google_expired');
+    try {
+      const identity = await ctx.oauth.exchange(request.query.code, verifier);
+      const session = ctx.auth.loginGoogle(identity.sub, identity.email, identity.name);
+      reply.setCookie(SESSION_COOKIE, session.id, {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: ctx.config.NODE_ENV === 'production' && (ctx.settings.current().publicUrl?.startsWith('https://') ?? false),
+        signed: true,
+        expires: new Date(session.expiresAt),
+      });
+      ctx.events.record('auth.google_login', `Google user ${identity.email} logged in`, { payload: { email: identity.email } });
+      return reply.redirect('/');
+    } catch (err) {
+      ctx.logger.warn({ err }, 'Google OAuth callback failed');
+      return reply.redirect('/?auth_error=google_failed');
+    }
+  });
+
   app.post('/auth/login', async (request, reply) => {
+    if (!ctx.config.LOCAL_LOGIN_ENABLED && !ctx.config.DEMO_MODE) throw new HttpError(404, 'Local password login is disabled');
     throttle.check(request.ip);
     const { username, password } = loginSchema.parse(request.body);
     const session = ctx.auth.login(username, password);

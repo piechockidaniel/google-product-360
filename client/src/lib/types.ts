@@ -3,6 +3,8 @@
 export interface User {
   id: number;
   username: string;
+  email: string | null;
+  googleSub: string | null;
   createdAt: string;
   lastLoginAt: string | null;
   previousLoginAt: string | null;
@@ -348,6 +350,38 @@ export interface ProductDetails extends ProductRecord {
   metadata: ProductMetadata;
 }
 
+export interface RemediationProposal {
+  issueCode: string;
+  attribute: string;
+  proposedValue: string;
+  evidence: string;
+  consequence: string;
+  remediation: string;
+}
+
+export interface RemediationEvent {
+  id: number;
+  operationId: string;
+  type: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface RemediationOperation {
+  id: string;
+  productName: string;
+  issueCode: string;
+  attribute: string;
+  proposedValue: string;
+  status: 'queued' | 'running' | 'pending_google' | 'succeeded' | 'failed';
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  deadlineAt: string;
+  resultMessage: string | null;
+  events: RemediationEvent[];
+}
+
 export interface AccountIssue {
   id: number;
   title: string | null;
@@ -593,6 +627,8 @@ export interface SetupStatus {
   configured: boolean;
   setupCompleted: boolean;
   mock: boolean;
+  googleOAuthConfigured?: boolean;
+  localLoginEnabled?: boolean;
   /** Self-contained demo on synthetic data (DEMO_MODE). */
   demo?: boolean;
 }

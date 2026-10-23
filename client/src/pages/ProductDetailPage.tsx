@@ -4,14 +4,15 @@ import { api } from '../lib/api';
 import { useFormat } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useAsync } from '../lib/hooks';
-import type { AppEvent, Facets, ProductDetails, ProductIssue, RenderedIssue } from '../lib/types';
+import type { AppEvent, Facets, ProductDetails, ProductIssue, RemediationOperation, RemediationProposal, RenderedIssue } from '../lib/types';
 import { Badge, Card, Confirm, Empty, ErrorBox, LevelBadge, Spinner, StatusBadge, TagList, useToast } from '../components/ui';
 import AttributeForm from '../components/AttributeForm';
 import Product360Panel from '../components/Product360Panel';
 import { RecommendationBadge } from '../components/signals';
 
-export default function ProductDetailPage() {
-  const { id = '' } = useParams();
+export default function ProductDetailPage({ embedded = false, productId, onClose }: { embedded?: boolean; productId?: string; onClose?: () => void }) {
+  const route = useParams();
+  const id = productId ?? route.id ?? '';
   const notify = useToast();
   const { t } = useI18n();
   const { formatDate, formatPrice, timeAgo } = useFormat();
@@ -19,9 +20,25 @@ export default function ProductDetailPage() {
   const facets = useAsync(() => api.get<Facets>('/api/products/facets'), []);
   const rendered = useAsync(() => api.get<{ issues: RenderedIssue[] }>(`/api/products/${id}/rendered-issues`).catch(() => ({ issues: [] as RenderedIssue[] })), [id]);
   const history = useAsync(() => api.get<{ issues: ProductIssue[]; events: AppEvent[] }>(`/api/products/${id}/history`), [id, product.data?.lastSeenAt]);
+  const remediations = useAsync(() => api.get<{ proposals: RemediationProposal[]; operations: RemediationOperation[] }>(`/api/products/${id}/remediations`), [id, product.data?.lastSeenAt]);
   const [tab, setTab] = useState<'p360' | 'issues' | 'attributes' | 'enrich' | 'history' | 'raw'>('p360');
   /** Search query picked on the 360° tab – pre-fills the title in the enrichment form. */
   const [titleIdea, setTitleIdea] = useState<string | null>(null);
+  const [remediationBusy, setRemediationBusy] = useState<string | null>(null);
+  const latestOperation = remediations.data?.operations[0];
+
+  useEffect(() => {
+    if (!latestOperation || !['queued', 'running', 'pending_google'].includes(latestOperation.status)) return;
+    const timer = window.setInterval(() => void remediations.reload(), 1000);
+    return () => window.clearInterval(timer);
+  }, [latestOperation?.id, latestOperation?.status]);
+
+  useEffect(() => {
+    if (latestOperation?.status === 'succeeded') {
+      void product.reload();
+      void history.reload();
+    }
+  }, [latestOperation?.id, latestOperation?.status]);
 
   if (product.loading && !product.data) return <Spinner />;
   if (product.error || !product.data) return <ErrorBox error={product.error ?? '404'} onRetry={product.reload} />;
@@ -40,7 +57,7 @@ export default function ProductDetailPage() {
   };
 
   return (
-    <div className="page">
+    <div className={`page ${embedded ? 'detail-pane-page' : ''}`}>
       <header className="page-header">
         <div className="product-head">
           {p.imageLink && <img className="thumb-lg" src={p.imageLink} alt="" onError={(e) => e.currentTarget.classList.add('thumb-hidden')} />}
@@ -66,6 +83,7 @@ export default function ProductDetailPage() {
           </div>
         </div>
         <div className="page-actions">
+          {embedded && onClose && <button className="btn btn-ghost" onClick={onClose} aria-label={t('detail.close')}>×</button>}
           <button className="btn" onClick={refresh}>
             {t('detail.refresh')}
           </button>
@@ -171,6 +189,29 @@ export default function ProductDetailPage() {
                         </>
                       )}
                     </div>
+                    {(() => {
+                      const proposal = remediations.data?.proposals.find((candidate) => candidate.issueCode === i.code);
+                      if (!proposal) return null;
+                      return (
+                        <QuickFixAction
+                          proposal={proposal}
+                          busy={remediationBusy === i.code}
+                          onApply={async () => {
+                            if (!window.confirm(t('detail.quickFixConfirm', { value: proposal.proposedValue }))) return;
+                            setRemediationBusy(i.code);
+                            try {
+                              await api.post(`/api/products/${p.productId}/remediations`, { issueCode: i.code });
+                              notify(t('detail.quickFixQueued'), 'info');
+                              await remediations.reload();
+                            } catch (err) {
+                              notify((err as Error).message, 'error');
+                            } finally {
+                              setRemediationBusy(null);
+                            }
+                          }}
+                        />
+                      );
+                    })()}
                   </div>
                 </li>
               ))}
@@ -205,6 +246,22 @@ export default function ProductDetailPage() {
                 ))}
               </ul>
             </>
+          )}
+          {latestOperation && (
+            <section className="operation-panel">
+              <h4>{t('detail.operationTrace')}</h4>
+              <div className="operation-status-line">
+                <Badge tone={latestOperation.status === 'succeeded' ? 'ok' : latestOperation.status === 'failed' ? 'error' : 'warning'}>{latestOperation.status}</Badge>{' '}
+                <span>{latestOperation.resultMessage ?? t('detail.operationRunning')}</span>
+              </div>
+              <div className="trace-list">
+                {latestOperation.events.map((event) => (
+                  <div className="trace-event" key={event.id}>
+                    <strong>{event.type}</strong> <span>{event.message}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
         </Card>
       )}
@@ -295,6 +352,23 @@ export default function ProductDetailPage() {
           <pre className="code-block">{JSON.stringify(p.product, null, 2)}</pre>
         </Card>
       )}
+      {embedded && onClose && (
+        <div className="form-actions detail-pane-footer">
+          <button className="btn btn-primary" onClick={onClose}>{t('common.ok')}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuickFixAction({ proposal, busy, onApply }: { proposal: RemediationProposal; busy: boolean; onApply: () => Promise<void> }) {
+  const { t } = useI18n();
+  return (
+    <div className="quick-fix-card">
+      <div><Badge tone="ok">{t('detail.quickFixAvailable')}</Badge> <span className="muted small">{proposal.attribute}: {proposal.proposedValue}</span></div>
+      <div className="small muted">{proposal.evidence}</div>
+      <div className="small">{proposal.remediation}</div>
+      <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => void onApply()}>{busy ? t('detail.quickFixRunning') : t('detail.quickFix')}</button>
     </div>
   );
 }

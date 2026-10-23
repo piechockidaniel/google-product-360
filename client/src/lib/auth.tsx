@@ -11,6 +11,8 @@ interface AuthState {
   /** Merchant Center connection is configured (mock or real credentials). */
   configured: boolean;
   setupCompleted: boolean;
+  googleOAuthConfigured: boolean;
+  localLoginEnabled: boolean;
   /** No user exists yet – the wizard must create the administrator first. */
   needsAdmin: boolean;
   loading: boolean;
@@ -39,6 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accountId, setAccountId] = useState<string | null>(null);
   const [configured, setConfigured] = useState(false);
   const [setupCompleted, setSetupCompleted] = useState(false);
+  const [googleOAuthConfigured, setGoogleOAuthConfigured] = useState(false);
+  const [localLoginEnabled, setLocalLoginEnabled] = useState(false);
   const [needsAdmin, setNeedsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -59,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSetupCompleted(status.setupCompleted);
       setMock(status.mock);
       setDemo(!!status.demo);
+      setGoogleOAuthConfigured(!!status.googleOAuthConfigured);
+      setLocalLoginEnabled(!!status.localLoginEnabled);
     }
     try {
       applyMe(await api.get<Me>('/api/auth/me'));
@@ -89,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, mock, demo, accountId, configured, setupCompleted, needsAdmin, loading, login, logout, acknowledge, refresh }}>
+    <AuthContext.Provider value={{ user, mock, demo, accountId, configured, setupCompleted, googleOAuthConfigured, localLoginEnabled, needsAdmin, loading, login, logout, acknowledge, refresh }}>
       {children}
     </AuthContext.Provider>
   );

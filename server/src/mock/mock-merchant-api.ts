@@ -226,7 +226,7 @@ export class MockMerchantApi implements MerchantApi {
         feedLabel,
         dataSource: de ? primaryDe.name : primary.name,
         productAttributes: {
-          title: `${brand} ${type} ${color}`,
+          title: issues.some((issue) => issue.code === 'generic_title') ? `${type} ${color}` : `${brand} ${type} ${color}`,
           description: `The ${brand} ${type} in ${color.toLowerCase()} – durable, lightweight and made to last.`,
           link: `https://example-shop.pl/p/${offerId.toLowerCase()}`,
           imageLink: `https://example-shop.pl/img/${offerId.toLowerCase()}.jpg`,
@@ -419,13 +419,23 @@ export class MockMerchantApi implements MerchantApi {
   /** Applies supplemental inputs on top of the primary product, like Google does. */
   private materialize(entry: MockProduct): Product {
     const product = structuredClone(entry.product);
+    let titleWasEnriched = false;
     for (const input of entry.supplemental.values()) {
       product.productAttributes = { ...product.productAttributes, ...input.productAttributes };
+      if (typeof input.productAttributes?.title === 'string' && input.productAttributes.title.trim()) titleWasEnriched = true;
       if (input.customAttributes?.length) {
         const merged = new Map((product.customAttributes ?? []).map((c) => [c.name, c]));
         for (const c of input.customAttributes) merged.set(c.name, c);
         product.customAttributes = [...merged.values()];
       }
+    }
+    if (titleWasEnriched && product.productStatus?.itemLevelIssues) {
+      const issues = product.productStatus.itemLevelIssues.filter((issue) => issue.code !== 'generic_title');
+      product.productStatus = {
+        ...product.productStatus,
+        itemLevelIssues: issues,
+        destinationStatuses: [this.destinationStatusFor(issues, product.feedLabel ?? '')],
+      };
     }
     return product;
   }

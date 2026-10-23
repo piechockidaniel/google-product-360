@@ -83,6 +83,13 @@ export const en = {
   'login.submit': 'Sign in',
   'login.busy': 'Signing in…',
   'login.failed': 'Login failed',
+  'login.google': 'Continue with Google',
+  'login.orLocal': 'or use local administrator login',
+  'login.noProvider': 'No login provider is configured. Set up Google OAuth on the server.',
+  'login.error.google_denied': 'Google sign-in was cancelled.',
+  'login.error.google_invalid_callback': 'Google sign-in returned an invalid callback.',
+  'login.error.google_expired': 'The Google sign-in session expired. Try again.',
+  'login.error.google_failed': 'Google sign-in failed. Check the server configuration and try again.',
 
   // ---- statuses / levels
   'status.APPROVED': 'Approved',
@@ -187,6 +194,14 @@ export const en = {
   // ---- product detail
   'detail.refresh': 'Refresh from Google',
   'detail.refreshed': 'Product refreshed from Google',
+  'detail.close': 'Close product details',
+  'detail.quickFix': 'Approve and run Quick Fix',
+  'detail.quickFixAvailable': 'Safe Quick Fix available',
+  'detail.quickFixRunning': 'Submitting…',
+  'detail.quickFixQueued': 'Quick Fix queued; Google processing continues in the background.',
+  'detail.quickFixConfirm': 'Submit the deterministic title correction "{value}" to Google through the supplemental data source?',
+  'detail.operationTrace': 'Operation trace',
+  'detail.operationRunning': 'The operation is running independently of this window.',
   'detail.landingPage': 'landing page',
   'detail.deleted': 'deleted from account {ago}',
   'detail.dataSource': 'Data source',

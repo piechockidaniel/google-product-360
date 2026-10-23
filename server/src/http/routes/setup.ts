@@ -79,14 +79,17 @@ function hintFor(err: unknown): string {
  */
 export function registerSetupRoutes(app: FastifyInstance, ctx: AppContext): void {
   app.get('/setup/status', async () => ({
-    needsAdmin: ctx.auth.userCount() === 0,
+    needsAdmin: (ctx.config.LOCAL_LOGIN_ENABLED || ctx.config.DEMO_MODE) && ctx.auth.userCount() === 0,
     configured: ctx.settings.isConfigured(),
     setupCompleted: !!ctx.settings.current().setupCompletedAt,
     mock: ctx.settings.current().mock,
     demo: ctx.config.DEMO_MODE,
+    googleOAuthConfigured: ctx.oauth.configured,
+    localLoginEnabled: ctx.config.LOCAL_LOGIN_ENABLED || ctx.config.DEMO_MODE,
   }));
 
   app.post('/setup/admin', async (request, reply) => {
+    if (!ctx.config.LOCAL_LOGIN_ENABLED && !ctx.config.DEMO_MODE) throw new HttpError(404, 'Local administrator setup is disabled');
     if (ctx.auth.userCount() > 0) throw new HttpError(409, 'An administrator already exists – please log in');
     const { username, password } = adminSchema.parse(request.body);
     const user = ctx.auth.createUser(username, password);

@@ -112,7 +112,9 @@ take precedence; `.env` acts as the default for a fresh database.
 | `DATABASE_PATH` | `./data/gmc-manager.sqlite` | SQLite file; migrations run automatically on start |
 | `SESSION_SECRET` | *(must change)* | signs login cookies **and encrypts the stored service-account key**; ≥ 16 chars, use `openssl rand -hex 32`. Changing it logs everyone out and makes the stored key unreadable (the wizard asks for it again) |
 | `SESSION_TTL_HOURS` | `168` | login validity |
-| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | `admin`, – | first administrator, created on first start when set; otherwise the wizard asks |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` | – | Google OAuth web client and exact callback URI (`/api/auth/google/callback`) for operator login |
+| `LOCAL_LOGIN_ENABLED` | `false` | local password login; keep disabled in production, demo/development may enable it |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | `admin`, – | optional local administrator for demo/development or an explicit local-login fallback |
 | `MERCHANT_ACCOUNT_ID` | – | Merchant Center account id (the number in Merchant Center's top-right corner) |
 | `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` / `GOOGLE_SERVICE_ACCOUNT_JSON` | `./service-account-key.json` | service-account key as file path or inline JSON (container secrets) |
 | `MERCHANT_API_BASE_URL`, `MERCHANT_API_VERSION` | Google's, `v1` | only for testing against a proxy / new version |
@@ -135,9 +137,11 @@ API concurrency for bulk operations (8).
 
 ### 3.1 Users
 
-Stored in the database, passwords hashed (scrypt). First admin: wizard or `ADMIN_*`; more users
-on *Settings → Users* or `npm run user:add -- <username> <password>`. There are no roles – every
-login can do everything (decision recorded in the Product360 plan).
+Production users authenticate with Google OAuth and are shadowed in the database by their verified
+Google subject and e-mail. Google OAuth tokens are not stored. Local users have scrypt-hashed
+passwords and are available only when `LOCAL_LOGIN_ENABLED=true` (or in the demo/development
+environment). There are no roles – every login can do everything (decision recorded in the
+Product360 plan).
 
 ---
 

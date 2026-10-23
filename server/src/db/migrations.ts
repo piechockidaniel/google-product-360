@@ -322,4 +322,52 @@ export const MIGRATIONS: Migration[] = [
       ALTER TABLE product_signals ADD COLUMN sc_position_28d REAL;
     `,
   },
+  {
+    id: 4,
+    name: 'google-identity-login',
+    sql: `
+      ALTER TABLE users ADD COLUMN google_sub TEXT;
+      ALTER TABLE users ADD COLUMN email TEXT;
+      CREATE UNIQUE INDEX idx_users_google_sub ON users(google_sub) WHERE google_sub IS NOT NULL;
+      CREATE INDEX idx_users_email ON users(email);
+
+      CREATE TABLE oauth_states (
+        state TEXT PRIMARY KEY,
+        code_verifier TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+      );
+      CREATE INDEX idx_oauth_states_expires ON oauth_states(expires_at);
+    `,
+  },
+  {
+    id: 5,
+    name: 'durable-remediation-operations',
+    sql: `
+      CREATE TABLE remediation_operations (
+        id TEXT PRIMARY KEY,
+        product_name TEXT NOT NULL,
+        issue_code TEXT NOT NULL,
+        attribute TEXT NOT NULL,
+        proposed_value TEXT NOT NULL,
+        status TEXT NOT NULL,                 -- queued | running | pending_google | succeeded | failed
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT,
+        deadline_at TEXT NOT NULL,
+        result_message TEXT
+      );
+      CREATE INDEX idx_remediation_product ON remediation_operations(product_name, created_at);
+      CREATE INDEX idx_remediation_active ON remediation_operations(status);
+
+      CREATE TABLE remediation_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        operation_id TEXT NOT NULL REFERENCES remediation_operations(id) ON DELETE CASCADE,
+        event_type TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX idx_remediation_events_operation ON remediation_events(operation_id, id);
+    `,
+  },
 ];

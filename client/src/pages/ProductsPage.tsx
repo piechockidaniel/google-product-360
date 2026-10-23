@@ -10,6 +10,7 @@ import AttributeForm from '../components/AttributeForm';
 import { Delta } from '../components/charts';
 import { RecommendationBadge, formatPct } from '../components/signals';
 import { RECOMMENDATIONS } from '../lib/types';
+import ProductDetailPage from './ProductDetailPage';
 
 const STATUSES = ['APPROVED', 'PARTIALLY_APPROVED', 'DISAPPROVED', 'PENDING', 'NOT_ELIGIBLE', 'UNKNOWN'];
 const LIMIT = 50;
@@ -21,6 +22,7 @@ export default function ProductsPage() {
   const { formatPrice, timeAgo } = useFormat();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const query = useMemo(
     () => ({
@@ -248,10 +250,10 @@ export default function ProductsPage() {
                   </td>
                   <td>{p.imageLink ? <img className="thumb" src={p.imageLink} alt="" loading="lazy" onError={(e) => e.currentTarget.classList.add('thumb-hidden')} /> : <span className="thumb thumb-empty" />}</td>
                   <td>
-                    <Link to={`/products/${p.productId}`}>{p.offerId}</Link>
+                    <Link to={`/products/${p.productId}`} onClick={(e) => { if (!e.metaKey && !e.ctrlKey && e.button === 0) { e.preventDefault(); setDetailId(p.productId); } }}>{p.offerId}</Link>
                   </td>
                   <td>
-                    <Link to={`/products/${p.productId}`}>{p.title ?? <span className="muted">{t('products.noTitle')}</span>}</Link>
+                    <Link to={`/products/${p.productId}`} onClick={(e) => { if (!e.metaKey && !e.ctrlKey && e.button === 0) { e.preventDefault(); setDetailId(p.productId); } }}>{p.title ?? <span className="muted">{t('products.noTitle')}</span>}</Link>
                   </td>
                   <td className="muted">{p.brand ?? '–'}</td>
                   <td className="muted">
@@ -311,6 +313,13 @@ export default function ProductsPage() {
             }}
           />
         </Modal>
+      )}
+      {detailId && (
+        <div className="detail-drawer-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setDetailId(null); }}>
+          <aside className="detail-drawer" aria-label={t('detail.close')}>
+            <ProductDetailPage embedded productId={detailId} onClose={() => setDetailId(null)} />
+          </aside>
+        </div>
       )}
     </div>
   );

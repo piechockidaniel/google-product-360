@@ -683,6 +683,62 @@ label.checkbox {
   width: 100%;
 }
 
+/* product detail drawer */
+.detail-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.48);
+}
+.detail-drawer {
+  width: min(760px, calc(100vw - 24px));
+  height: 100%;
+  overflow: auto;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.35);
+}
+.detail-pane-page {
+  max-width: none;
+  min-height: 100%;
+  padding: 18px 20px 28px;
+}
+.detail-pane-footer {
+  position: sticky;
+  bottom: 0;
+  justify-content: flex-end;
+  padding: 12px 0 0;
+  background: linear-gradient(transparent, var(--bg) 22%);
+}
+.quick-fix-card,
+.operation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-3);
+}
+.operation-status-line {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.trace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.trace-event {
+  padding: 6px 8px;
+  border-left: 2px solid var(--primary);
+  font-size: 12px;
+}
+
 /* modal */
 .modal-backdrop {
   position: fixed;
@@ -766,6 +822,16 @@ label.checkbox {
 .login .btn {
   margin-top: 8px;
   justify-content: center;
+}
+.login-divider {
+  margin: 8px 0 2px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 12px;
+}
+.google-login {
+  display: flex;
+  text-decoration: none;
 }
 
 /* ---------------------------------------------------------------- setup wizard */
