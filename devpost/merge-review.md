@@ -33,35 +33,32 @@ operator areas:
 
 ## Intentional merge choices
 
-The small POC's `Quick Fix` worker removed a synthetic issue from a local demo
-payload. It was not carried over as a live-looking action because that would
-claim a Google-side result without calling the official remediation path. The
-canonical app instead exposes:
+The canonical runtime keeps the broader `gmc-manager` implementation and adds
+the approved Product360 behavior without retaining a second demo server. The
+current application exposes:
 
+- Google OAuth-first operator login with a local/demo fallback only where explicitly enabled;
 - user-reviewed attribute pushes through a supplemental data source;
-- bulk enrichment for selected products;
-- workflow-triggered enrichment and feed actions; and
-- durable events for successful and failed operations.
+- a deterministic `generic_title` Quick Fix that submits a `ProductInput`, persists its operation trace, and reconciles the product snapshot;
+- bulk enrichment and workflow-triggered enrichment/feed actions; and
+- durable events for successful, failed, and still-processing operations.
 
-This is the safer foundation for a future predictable-remediation worker. That
-worker should submit a supported `ProductInput` change, persist its operation
-trace, reconcile the authoritative Merchant API snapshot, and only then mark a
-product issue as resolved.
+Demo mode exercises the same flow with synthetic data and labels that mode
+clearly; it does not claim that Google was contacted.
 
-## Known specification gap
+## Cleanup audit
 
-The approved POC documents define Google OAuth as the primary operator login
-and protected server-side authorization for background work. The merged
-runtime currently uses a local administrator session plus a server-side Google
-service-account credential configured by the setup wizard. This is deliberate
-for the current hackathon/demo slice and is clearly described in the runtime
-documentation; OAuth-first authorization remains a follow-up implementation,
-not a silently completed feature.
+The post-merge cleanup checked all client and server source files from the
+application and its supported entrypoints. Every source file is reachable from
+the server, client, CLI, demo, or E2E entrypoint. Deployment alternatives,
+documentation, tests, and `server/src/cli/add-user.ts` are retained because
+they are referenced by scripts or provide supported operational paths. No
+unreferenced application file was removed.
 
 ## Verification
 
 - `npm run typecheck` passes.
-- `npm test` passes: 15 files and 112 tests.
+- `npm test` passes: 16 files and 113 tests.
 - `npm run build` passes; Vite reports only the existing bundle-size warning.
 - `npm run test:e2e` starts the isolated demo server, but browser assertions
   require the local Playwright Chromium binary, which is not installed in this
