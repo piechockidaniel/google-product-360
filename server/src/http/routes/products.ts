@@ -7,7 +7,8 @@ import { PRODUCT_ORDER_COLUMNS } from '../../services/product-store.js';
 import { mapWithConcurrency } from '../../util/pool.js';
 import { notFound } from '../server.js';
 
-const csv = (schema: z.ZodTypeAny) => z.preprocess((v) => (typeof v === 'string' ? v.split(',').filter(Boolean) : v), z.array(schema).optional());
+const csv = <T extends z.ZodTypeAny>(schema: T): z.ZodType<z.infer<T>[] | undefined> =>
+  z.preprocess((v) => (typeof v === 'string' ? v.split(',').filter(Boolean) : v), z.array(schema).optional());
 
 const listQuerySchema = z.object({
   q: z.string().optional(),
@@ -32,17 +33,17 @@ const listQuerySchema = z.object({
 const metadataSchema = z.object({
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
-  fields: z.record(z.string()).optional(),
+  fields: z.record(z.string(), z.string()).optional(),
 });
 
 const attributesSchema = z.object({
-  attributes: z.record(z.unknown()).default({}),
+  attributes: z.record(z.string(), z.unknown()).default({}),
   customAttributes: z.array(z.object({ name: z.string().min(1), value: z.string() })).optional(),
 });
 
 const bulkSchema = z.object({
   productIds: z.array(z.string().min(1)).min(1).max(500),
-  attributes: z.record(z.unknown()).optional(),
+  attributes: z.record(z.string(), z.unknown()).optional(),
   customAttributes: z.array(z.object({ name: z.string().min(1), value: z.string() })).optional(),
   addTags: z.array(z.string()).optional(),
   removeTags: z.array(z.string()).optional(),

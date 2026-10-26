@@ -104,7 +104,7 @@ export const stepSchema = z.discriminatedUnion('type', [
   /** Push attributes to Google through the enrichment data source. Values support {{templates}}. */
   z.object({
     type: z.literal('set_attributes'),
-    attributes: z.record(z.unknown()),
+    attributes: z.record(z.string(), z.unknown()),
     customAttributes: z.array(z.object({ name: z.string().min(1), value: z.string() })).optional(),
     continueOnError: z.boolean().default(true),
   }),
@@ -136,7 +136,7 @@ export const stepSchema = z.discriminatedUnion('type', [
     type: z.literal('webhook'),
     url: z.string().url(),
     method: z.enum(['POST', 'PUT']).default('POST'),
-    headers: z.record(z.string()).optional(),
+    headers: z.record(z.string(), z.string()).optional(),
     message: z.string().optional(),
     includeProducts: z.boolean().default(true),
     /** Skip the call when the working set is empty. */

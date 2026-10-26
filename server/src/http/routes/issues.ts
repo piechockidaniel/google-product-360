@@ -2,7 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { AppContext } from '../../app.js';
 
-const csv = (schema: z.ZodTypeAny) => z.preprocess((v) => (typeof v === 'string' ? v.split(',').filter(Boolean) : v), z.array(schema).optional());
+const csv = <T extends z.ZodTypeAny>(schema: T): z.ZodType<z.infer<T>[] | undefined> =>
+  z.preprocess((v) => (typeof v === 'string' ? v.split(',').filter(Boolean) : v), z.array(schema).optional());
 
 const querySchema = z.object({
   /** ISO timestamp, or the literal `lastLogin` */
