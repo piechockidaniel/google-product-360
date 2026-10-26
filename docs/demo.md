@@ -10,7 +10,7 @@ and Market Insights reports, and a fake Search Console property. Everything in t
 ## Start it
 
 ```bash
-npm install
+npm ci
 npm run demo              # builds once, then serves http://localhost:8080
 # npm run demo:reset      # start from an empty demo database
 ```

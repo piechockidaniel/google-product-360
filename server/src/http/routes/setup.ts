@@ -13,6 +13,18 @@ const updateSchema = merchantSettingsSchema.partial().extend({
   serviceAccountJson: z.string().nullable().optional(),
 });
 
+function parseSettingsPatch(input: unknown): z.infer<typeof updateSchema> {
+  const patch = updateSchema.parse(input);
+  if (typeof input === 'object' && input !== null && !Array.isArray(input)) {
+    const requestedKeys = input as Record<string, unknown>;
+    const parsedPatch = patch as Record<string, unknown>;
+    for (const key of Object.keys(parsedPatch)) {
+      if (!Object.prototype.hasOwnProperty.call(requestedKeys, key)) delete parsedPatch[key];
+    }
+  }
+  return patch;
+}
+
 const testSchema = z.object({
   mock: z.boolean().default(false),
   merchantAccountId: z.string().trim().default(''),
@@ -105,7 +117,7 @@ export function registerSetupRoutes(app: FastifyInstance, ctx: AppContext): void
     secured.get('/setup/config', async () => ctx.settings.publicView());
 
     secured.put('/setup/config', async (request) => {
-      const patch = updateSchema.parse(request.body);
+      const patch = parseSettingsPatch(request.body);
       if (patch.serviceAccountJson === undefined) delete patch.serviceAccountJson;
       try {
         ctx.settings.update(patch);

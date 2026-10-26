@@ -33,8 +33,12 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
     }
   }
   if (!response.ok) {
-    if (response.status === 401 && !url.includes('/auth/login')) unauthorizedListeners.forEach((l) => l());
     const err = data as { error?: string; details?: unknown } | null;
+    const sessionExpired =
+      response.status === 401 &&
+      !url.includes('/auth/login') &&
+      (url.includes('/auth/me') || err?.error === 'Authentication required' || err?.error === 'Not authenticated');
+    if (sessionExpired) unauthorizedListeners.forEach((l) => l());
     let message = err?.error ?? `HTTP ${response.status}`;
     if (Array.isArray(err?.details)) {
       const parts = (err!.details as { path?: string; message?: string }[]).map((d) => `${d.path ? d.path + ': ' : ''}${d.message ?? ''}`);

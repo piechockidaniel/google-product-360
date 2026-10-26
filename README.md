@@ -33,7 +33,7 @@ UI in Polish and English.
 ## Quick start
 
 ```bash
-npm install                   # also installs client/ dependencies
+npm ci                        # installs locked server + client dependencies
 cp .env.example .env          # set SESSION_SECRET (openssl rand -hex 32); the rest can be done in the browser
 npm start                     # builds server + client, serves http://localhost:8080
 ```

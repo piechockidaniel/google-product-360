@@ -3,7 +3,8 @@ import { z } from 'zod';
 import type { AppContext } from '../../app.js';
 import { HttpError } from '../server.js';
 
-const csv = (schema: z.ZodTypeAny) => z.preprocess((v) => (typeof v === 'string' ? v.split(',').filter(Boolean) : v), z.array(schema).optional());
+const csv = <T extends z.ZodTypeAny>(schema: T): z.ZodType<z.infer<T>[] | undefined> =>
+  z.preprocess((v) => (typeof v === 'string' ? v.split(',').filter(Boolean) : v), z.array(schema).optional());
 
 const eventsQuery = z.object({
   since: z.string().optional(),

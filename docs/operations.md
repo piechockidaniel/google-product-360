@@ -269,6 +269,7 @@ separate host name if prospects should reach it. See [demo.md](demo.md).
 
 | Symptom | Cause / fix |
 |---------|-------------|
+| `npm audit fix --force` makes the build fail | Do not use the force option on a deployed checkout: it can replace major versions outside the tested lockfiles. Restore the checkout, pull the current revision, then run `npm ci && npm run build`; use `npm audit fix --package-lock-only` only for non-breaking fixes and commit the resulting lockfile. |
 | Wizard: *GCP project … is not registered* | Merchant-API developer registration missing → *Register Google Cloud project* button, wait 5 min. Details in [google-setup.md](google-setup.md#troubleshooting-the-test-connection-messages). |
 | Wizard: *The caller does not have permission* | service account not a user of the account, or Merchant API not enabled in its project. |
 | Sync works, but prices / best sellers / competitors are empty | Market Insights not enabled in Merchant Center (or no comparable offers). *Settings → Product360 → Test connection* lists the unavailable reports. |
