@@ -11,14 +11,14 @@ This is a technical handoff for preparing the Build With AI Basics submission. I
 
 - Repository: `https://github.com/piechockidaniel/google-product-360`
 - Optional live demo: `https://gmc.connect-the-dots.biz/`
-- Demo login: `demo` / `demo1234`
+- The fresh live demo opens the administrator setup wizard; create a local demo account there.
 - Demo mode is synthetic and clearly reports `mock: true`; it does not use a Google account or Merchant Center data.
 
 ## What To Record
 
 Use the live demo for the required short video. Keep credentials, server terminals, and unrelated browser tabs out of the recording.
 
-1. Open the demo URL and sign in with the demo account.
+1. Open the demo URL and create an administrator account in the setup wizard.
 2. Show the labelled Demo mode and the Product360 dashboard.
 3. Open Products and show the agreed product grid, including status and issue summary.
 4. Open a predictable product issue and read the evidence, proposed correction, and consequence.
@@ -33,6 +33,7 @@ Use the live demo for the required short video. Keep credentials, server termina
 - Demo service: `gmc-manager-demo`, isolated database `data/demo.sqlite`, loopback port `8091`.
 - Demo uses `DEMO_MODE=true` and `MERCHANT_MOCK=true`; production OAuth and service-account variables are not inherited by the demo service.
 - Public demo health check returned `200 OK` with `mock: true` and `configured: true`.
+- The reset public demo reports `needsAdmin: true`, so a new visitor can create the first account through the wizard.
 - Public demo checks returned a successful session, four products, Settings, and shipping data.
 - TLS is enabled for `gmc.connect-the-dots.biz` and renews through Certbot.
 

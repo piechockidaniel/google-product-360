@@ -26,6 +26,7 @@ const schema = z.object({
   /** Bootstrap admin user; created on first start if the users table is empty. */
   ADMIN_USERNAME: z.string().default('admin'),
   ADMIN_PASSWORD: z.string().optional(),
+  ADMIN_BOOTSTRAP_ENABLED: boolish.default(true),
   /** Google OIDC web client used only to authenticate operators. */
   GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),

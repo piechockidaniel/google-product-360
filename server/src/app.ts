@@ -208,7 +208,7 @@ export function buildApp(config: AppConfig, logger: Logger, options: BuildOption
   });
 
   // Bootstrap admin user from the environment (optional – the wizard can do it too).
-  if (auth.userCount() === 0 && config.ADMIN_PASSWORD) {
+  if (config.ADMIN_BOOTSTRAP_ENABLED && auth.userCount() === 0 && config.ADMIN_PASSWORD) {
     auth.createUser(config.ADMIN_USERNAME, config.ADMIN_PASSWORD);
     logger.info({ username: config.ADMIN_USERNAME }, 'Created initial admin user');
   }

@@ -115,6 +115,7 @@ take precedence; `.env` acts as the default for a fresh database.
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` | – | Google OAuth web client and exact callback URI (`/api/auth/google/callback`) for operator login |
 | `LOCAL_LOGIN_ENABLED` | `false` | local password login; keep disabled in production, demo/development may enable it |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | `admin`, – | optional local administrator for demo/development or an explicit local-login fallback |
+| `ADMIN_BOOTSTRAP_ENABLED` | `true` | create the configured administrator automatically when no users exist; set `false` to require the setup wizard |
 | `MERCHANT_ACCOUNT_ID` | – | Merchant Center account id (the number in Merchant Center's top-right corner) |
 | `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` / `GOOGLE_SERVICE_ACCOUNT_JSON` | `./service-account-key.json` | service-account key as file path or inline JSON (container secrets) |
 | `MERCHANT_API_BASE_URL`, `MERCHANT_API_VERSION` | Google's, `v1` | only for testing against a proxy / new version |
