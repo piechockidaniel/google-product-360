@@ -348,6 +348,7 @@ export interface ProductDetails extends ProductRecord {
   product: RawProduct;
   issues: ProductIssue[];
   metadata: ProductMetadata;
+  woocommerce?: { wooId: number; present: boolean; syncedAt: string; sku: string | null; name: string | null; price: string | null; stockStatus: string | null; stockQuantity: number | null } | null;
 }
 
 export interface RemediationProposal {

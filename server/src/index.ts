@@ -20,6 +20,7 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutting down');
     try {
+      ctx.woocommerce.cancel();
       await server.close();
       await ctx.stop();
     } finally {

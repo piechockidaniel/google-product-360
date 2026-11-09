@@ -19,6 +19,20 @@ function product(issues: { code: string; severity?: string }[], overrides: Parti
 }
 
 describe('ProductStore issue tracking', () => {
+  it('sorts and filters product columns over the whole result set', () => {
+    const db = new Database(':memory:');
+    const store = new ProductStore(db);
+    for (let i = 1; i <= 60; i++) {
+      store.upsertProduct(product([], { name: `accounts/1/products/item${i}`, offerId: `SKU-${String(i).padStart(3, '0')}`, feedLabel: i % 2 ? 'PL' : 'DE', productAttributes: { title: `Product ${i}`, brand: i % 2 ? 'A' : 'B', price: { amountMicros: String(i * 1_000_000), currencyCode: 'PLN' }, availability: 'IN_STOCK' } }));
+    }
+    const page = store.listProducts({ brand: 'A', priceMin: 20, orderBy: 'price', orderDir: 'desc', limit: 5, offset: 5 });
+    expect(page.total).toBe(20);
+    expect(page.items.map((item) => item.offerId)).toEqual(['SKU-049', 'SKU-047', 'SKU-045', 'SKU-043', 'SKU-041']);
+    expect(store.listProducts({ offerIdContains: 'SKU-060', titleContains: 'Product 60' }).total).toBe(1);
+    expect(store.listProducts({ offerIdContains: '%' }).total).toBe(0);
+    expect(store.listProducts({ issueCount: 0 }).total).toBe(60);
+    db.close();
+  });
   it('tracks new, persisting and resolved issues across upserts', () => {
     const store = new ProductStore(new Database(':memory:'));
     const first = store.upsertProduct(product([{ code: 'a' }, { code: 'b' }]), '2024-01-01T00:00:00.000Z');

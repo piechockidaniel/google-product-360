@@ -8,6 +8,7 @@ import { useAsync } from '../lib/hooks';
 import type { ReturnPolicy, Settings, ShippingSettings, Subscription } from '../lib/types';
 import { Badge, Card, Confirm, Empty, ErrorBox, JsonEditor, Modal, Spinner, useToast } from '../components/ui';
 import MetricsSettingsCard from '../components/MetricsSettingsCard';
+import WooCommerceSettingsCard from '../components/WooCommerceSettingsCard';
 
 interface QuotaResponse {
   groups: { name: string; usage: number; dailyLimit: number; minuteLimit: number; methods: string[] }[];
@@ -155,6 +156,7 @@ export default function SettingsPage() {
         </Card>
       </div>
 
+      <WooCommerceSettingsCard />
       <MetricsSettingsCard />
 
       <Card

@@ -370,4 +370,168 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX idx_remediation_events_operation ON remediation_events(operation_id, id);
     `,
   },
+  {
+    id: 6,
+    name: 'woocommerce_snapshots',
+    sql: `
+      CREATE TABLE woo_products (id INTEGER PRIMARY KEY, parent_id INTEGER, sku TEXT NOT NULL, data TEXT NOT NULL);
+      CREATE INDEX idx_woo_products_sku ON woo_products(sku);
+      CREATE TABLE woo_orders (id INTEGER PRIMARY KEY, data TEXT NOT NULL);
+      CREATE TABLE woo_sync_state (id INTEGER PRIMARY KEY CHECK(id = 1), store_url TEXT NOT NULL, synced_at TEXT NOT NULL, product_count INTEGER NOT NULL, order_count INTEGER NOT NULL);
+    `,
+  },
+  {
+    id: 7,
+    name: 'woocommerce_sync_history',
+    sql: `
+      CREATE TABLE woo_sync_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        store_url TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('running', 'success', 'failed', 'cancelled', 'interrupted')),
+        started_at TEXT NOT NULL,
+        heartbeat_at TEXT NOT NULL,
+        finished_at TEXT,
+        progress TEXT NOT NULL,
+        error TEXT
+      );
+      CREATE INDEX idx_woo_sync_runs_store ON woo_sync_runs(store_url, id DESC);
+    `,
+  },
+  {
+    id: 8,
+    name: 'woocommerce_google_mappings',
+    sql: `
+      CREATE TABLE woo_google_mappings (
+        store_url TEXT NOT NULL,
+        woo_id INTEGER NOT NULL,
+        google_product_name TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (store_url, google_product_name)
+      );
+      CREATE INDEX idx_woo_google_mapping_product ON woo_google_mappings(store_url, woo_id);
+    `,
+  },
+  {
+    id: 9,
+    name: 'allegro_connections',
+    sql: `
+      CREATE TABLE allegro_connections (
+        environment TEXT PRIMARY KEY CHECK(environment IN ('sandbox', 'production')),
+        client_id TEXT NOT NULL,
+        client_secret TEXT NOT NULL,
+        redirect_uri TEXT NOT NULL,
+        tokens TEXT,
+        seller_id TEXT,
+        seller_login TEXT,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE allegro_oauth_states (
+        state_hash TEXT PRIMARY KEY,
+        session_hash TEXT NOT NULL,
+        environment TEXT NOT NULL,
+        verifier TEXT NOT NULL,
+        config_hash TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+      );
+      CREATE INDEX idx_allegro_oauth_expiry ON allegro_oauth_states(expires_at);
+    `,
+  },
+  {
+    id: 10,
+    name: 'allegro_offer_snapshots',
+    sql: `
+      CREATE TABLE allegro_offers (
+        environment TEXT NOT NULL,
+        seller_id TEXT NOT NULL,
+        offer_id TEXT NOT NULL,
+        data TEXT NOT NULL,
+        PRIMARY KEY(environment, seller_id, offer_id)
+      );
+      CREATE TABLE allegro_offer_sync_state (
+        environment TEXT NOT NULL,
+        seller_id TEXT NOT NULL,
+        synced_at TEXT NOT NULL,
+        offer_count INTEGER NOT NULL,
+        PRIMARY KEY(environment, seller_id)
+      );
+    `,
+  },
+  {
+    id: 11,
+    name: 'allegro_offer_templates',
+    sql: `
+      CREATE TABLE allegro_offer_templates (
+        id TEXT PRIMARY KEY,
+        environment TEXT NOT NULL,
+        seller_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        source_offer_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX idx_allegro_templates_seller ON allegro_offer_templates(environment, seller_id, name);
+      CREATE TABLE allegro_offer_template_versions (
+        template_id TEXT NOT NULL REFERENCES allegro_offer_templates(id) ON DELETE CASCADE,
+        version INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(template_id, version)
+      );
+    `,
+  },
+  {
+    id: 12,
+    name: 'allegro_local_offer_drafts',
+    sql: `
+      CREATE TABLE allegro_offer_drafts (
+        id TEXT PRIMARY KEY,
+        environment TEXT NOT NULL,
+        seller_id TEXT NOT NULL,
+        template_id TEXT NOT NULL REFERENCES allegro_offer_templates(id),
+        template_version INTEGER NOT NULL,
+        woo_store_url TEXT NOT NULL,
+        woo_id INTEGER NOT NULL,
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX idx_allegro_drafts_seller ON allegro_offer_drafts(environment, seller_id, updated_at DESC);
+    `,
+  },
+  {
+    id: 13,
+    name: 'allegro_token_refresh_leases',
+    sql: `
+      CREATE TABLE allegro_refresh_leases (
+        environment TEXT PRIMARY KEY,
+        owner TEXT NOT NULL,
+        expires_at INTEGER NOT NULL
+      );
+    `,
+  },
+  {
+    id: 14,
+    name: 'allegro_sandbox_offer_operations',
+    sql: `
+      ALTER TABLE allegro_connections ADD COLUMN offer_write_enabled INTEGER NOT NULL DEFAULT 0;
+      CREATE TABLE allegro_offer_operations (
+        id TEXT PRIMARY KEY,
+        environment TEXT NOT NULL,
+        seller_id TEXT NOT NULL,
+        offer_id TEXT NOT NULL,
+        actor_id INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        requested TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('sending', 'pending', 'succeeded', 'failed', 'uncertain')),
+        operation_path TEXT,
+        message TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX idx_allegro_operations_seller ON allegro_offer_operations(environment, seller_id, created_at DESC);
+    `,
+  },
 ];

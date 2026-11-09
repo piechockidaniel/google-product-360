@@ -7,6 +7,28 @@ instance is described in [operations.md](operations.md), the screens in the
 
 ---
 
+## Local app with Google sign-in
+
+If `.env` contains the production OAuth callback, Google sign-in from a local app
+returns to the live site. Run `powershell -ExecutionPolicy Bypass -File
+scripts/start-local.ps1` from the project root to build and start the app on
+`http://localhost:8080`. The script sets the local callback and development mode
+for that process only; it does not edit `.env` or the live deployment.
+
+In Google Cloud Console, add `http://localhost:8080/api/auth/google/callback` to
+the **Authorized redirect URIs** of the OAuth web client used by the local app.
+Keep the production URI there as well. Google requires the exact callback URI,
+including port and path. A `redirect_uri_mismatch` means the local URI has not
+been authorized for the configured client.
+
+Open `http://localhost:8080` when using this script. Its callback returns to the
+same origin. The browser UI on Vite port 5173 is a separate origin; the callback
+on port 8080 returns to port 8080, not the Vite UI. The local app uses the
+database configured in the local `.env`; it does not automatically copy the
+live server's database.
+
+---
+
 ## 1. Stack & principles
 
 * **Server**: Node 22, TypeScript (ESM, `NodeNext`), Fastify 5, zod, `node:sqlite` (built in –
@@ -33,7 +55,7 @@ instance is described in [operations.md](operations.md), the screens in the
 
 ## 2. Project layout
 
-```
+```plain text
 server/src
   index.ts             process entry: config → buildApp → createServer → start (demo warm-up)
   app.ts               dependency wiring (AppContext) + reactions to settings changes
@@ -68,7 +90,7 @@ docs/                  this documentation
 
 ## 3. Runtime architecture
 
-```
+```plain text
                  ┌──────────── Google ────────────┐
                  │ Merchant API v1  Search Console │
                  └───────▲───────────────▲─────────┘
@@ -108,7 +130,7 @@ Migrations are plain SQL in `server/src/db/migrations.ts`, applied in order on s
 (`schema_migrations` table). They are additive only.
 
 | Table | Purpose |
-|-------|---------|
+| ------- | --------- |
 | `users`, `sessions`, `settings` | auth, cookie sessions, runtime settings (`merchant.*` keys; secrets encrypted `enc:v1:`), connector state (`connector.<id>.*`) |
 | `products` | snapshot of every product: id fields, denormalised columns (title, brand, price, availability, status, category …) + `raw_json`, first/last seen, `deleted_at` |
 | `product_issues` | one row per (product, issue fingerprint) with first/last seen and `resolved_at` |
@@ -139,7 +161,7 @@ All under `/api`, cookie session (`gmc_session`), JSON. Validation with zod → 
 Google errors are passed through as `Merchant API: …` with Google's status.
 
 | Area | Endpoints |
-|------|-----------|
+| ------ | ----------- |
 | Auth | `POST auth/login` (throttled), `POST auth/logout`, `GET auth/me`, `POST auth/acknowledge`, `POST auth/password` |
 | Setup | `GET setup/status` (public), `POST setup/admin` (first user only), `GET/PUT setup/config`, `POST setup/inspect-key`, `POST setup/test-connection`, `POST setup/register-gcp`, `POST setup/generate-secret`, `POST setup/complete` |
 | Dashboard | `GET dashboard` (flags, stats, feeds, since-last-login, `insights` = Product360 block) |
@@ -176,18 +198,18 @@ Google errors are passed through as `Merchant API: …` with Google's status.
 Schema: `server/src/workflows/schema.ts` (zod, the single source of truth; the UI palette
 `client/src/lib/workflow-blocks.ts` and forms `StepForms.tsx` mirror it).
 
-**Triggers**
+### Triggers
 
 | type | fields |
-|------|--------|
+| ------ | -------- |
 | `manual` | – |
 | `schedule` | `cron` (5/6 fields), `timezone?` |
 | `event` | `event` ∈ `sync.completed · issue.new · issue.resolved · product.status_changed · notification.received · metrics.synced · signal.changed`, `debounceSeconds` (0–3600, default 30) |
 
-**Steps**
+#### Steps
 
 | type | fields |
-|------|--------|
+| ------ | ------- |
 | `select_products` | `filter`: `q, status[], severity[], issueCode, tag, feedLabel, dataSource, brand, availability, hasIssues, category, recommendation[], limit` |
 | `select_by_signal` | `recommendation[]` (required), `minDemand?` 0–100, `minImpressions7d?`, `category?`, `limit?` |
 | `select_event_products` | `levels?[]`, `issueCodes?[]` |
@@ -198,11 +220,11 @@ Schema: `server/src/workflows/schema.ts` (zod, the single source of truth; the U
 | `set_sale_price` | `price` (`"89.99"`, `"-15%"`, template), `currency?` (3 letters, default product currency), `from` (default `now`), `to` – ISO date/time or relative `now`, `±Nh`, `±Nd`, `±Nw`; pushes `salePrice` + `salePriceEffectiveDate {startTime,endTime}` |
 | `clear_attributes` | `continueOnError` |
 | `add_tags`, `remove_tags` | `tags[]` |
-| `set_note` | `note`, `mode` `append|replace` |
+| `set_note` | `note`, `mode` `append or replace` |
 | `refresh_products` | `continueOnError` |
 | `fetch_feed` | `dataSourceId` |
 | `sync` | – |
-| `webhook` | `url`, `method` `POST|PUT`, `headers?`, `message?`, `includeProducts` (true), `skipIfEmpty` (true) |
+| `webhook` | `url`, `method` `POST or PUT`, `headers?`, `message?`, `includeProducts` (true), `skipIfEmpty` (true) |
 | `log` | `message`, `severity` |
 
 **Conditions** – `{ field, op, value? }` or `{ all: [...] }`, `{ any: [...] }`, `{ not: ... }`.
@@ -210,7 +232,7 @@ Operators: `eq neq contains not_contains in not_in exists not_exists regex gt gt
 starts_with ends_with is_empty is_not_empty`. Fields resolve dotted paths on the
 `ProductContext` (arrays map: `issues.level` → list of levels):
 
-```
+```code
 offerId title brand link feedLabel contentLanguage availability dataSource price.amount price.currency
 status issueCount maxSeverity issueCodes issues.{code,level,severity,attribute,reportingContext,countries}
 attributes.<apiName> customAttributes.<name> tags notes fields.<key> pushed.<attribute>
@@ -290,7 +312,7 @@ tests. Signals can read new columns through `MetricsStore`.
    the client as `reason.<code>`):
 
 | Order | Recommendation | Condition |
-|-------|----------------|-----------|
+| ------- | ---------------- | ----------- |
 | 1 | `NO_DATA` | impressions28 < min ∧ no benchmark ∧ no best seller ∧ organic impressions < min |
 | 2 | `FIX` | health ≤ 40 ∧ (demand ≥ 50 ∨ impressions28 ≥ min) |
 | 3 | `REPRICE` | price > benchmark + X % ∧ (CTR < category median ∨ effectiveness ∈ {HIGH, MEDIUM}) |
@@ -344,7 +366,7 @@ app with an in-memory database and an injected `MockMerchantApi`; the Search Con
 created by `app.ts` in mock mode).
 
 | File | Covers |
-|------|--------|
+| ------ | ------- |
 | `conditions.test.ts` | operators, path resolution, templates |
 | `attribute-catalog.test.ts` | attribute coercion / validation |
 | `product-store.test.ts` | issue diffing, status aggregation, filters |

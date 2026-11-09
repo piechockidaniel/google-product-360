@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
+import Fastify, { LogController, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import { ZodError } from 'zod';
@@ -19,6 +19,8 @@ import { registerNotificationRoutes } from './routes/notifications.js';
 import { registerSystemRoutes } from './routes/system.js';
 import { registerSetupRoutes } from './routes/setup.js';
 import { registerMetricsRoutes } from './routes/metrics.js';
+import { registerWooCommerceRoutes } from './routes/woocommerce.js';
+import { registerAllegroRoutes } from './routes/allegro.js';
 import { NotConfiguredError } from '../google/switchable-api.js';
 
 export const SESSION_COOKIE = 'gmc_session';
@@ -53,6 +55,11 @@ export async function createServer(ctx: AppContext): Promise<FastifyInstance> {
     loggerInstance: ctx.logger as FastifyInstance['log'],
     trustProxy: true,
     bodyLimit: 5 * 1024 * 1024,
+    // OAuth authorization codes are carried in callback queries; never log query strings.
+    logController: new LogController({ disableRequestLogging: true }),
+  });
+  app.addHook('onResponse', async (request, reply) => {
+    request.log.info({ reqId: request.id, method: request.method, path: request.url.split('?')[0], statusCode: reply.statusCode, responseTime: reply.elapsedTime }, 'request completed');
   });
 
   await app.register(fastifyCookie, { secret: ctx.config.SESSION_SECRET });
@@ -114,6 +121,8 @@ export async function createServer(ctx: AppContext): Promise<FastifyInstance> {
         registerAccountRoutes(secured, ctx);
         registerSystemRoutes(secured, ctx);
         registerMetricsRoutes(secured, ctx);
+        registerWooCommerceRoutes(secured, ctx);
+        registerAllegroRoutes(secured, ctx);
       });
     },
     { prefix: '/api' },

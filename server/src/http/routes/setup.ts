@@ -9,7 +9,7 @@ import { HttpError } from '../server.js';
 const adminSchema = z.object({ username: z.string().trim().min(1).max(64), password: z.string().min(8) });
 
 /** Partial update; `serviceAccountJson` may be omitted to keep the stored key. */
-const updateSchema = merchantSettingsSchema.partial().extend({
+const updateSchema = merchantSettingsSchema.omit({ wooStoreUrl: true, wooConsumerKey: true, wooConsumerSecret: true, wooSyncIntervalMinutes: true, wooSyncOnStartup: true }).partial().extend({
   serviceAccountJson: z.string().nullable().optional(),
 });
 

@@ -91,6 +91,14 @@ export interface ProductMetadata {
 
 export interface ProductQuery {
   q?: string;
+  offerIdContains?: string;
+  titleContains?: string;
+  priceMin?: number;
+  issueCount?: number;
+  clicksMin?: number;
+  priceVsMinPct?: number;
+  organicMin?: number;
+  seenSince?: string;
   status?: AggregatedStatus[];
   severity?: IssueLevel[];
   issueCode?: string;
@@ -109,7 +117,7 @@ export interface ProductQuery {
   orderDir?: 'asc' | 'desc';
 }
 
-export const PRODUCT_ORDER_COLUMNS = ['title', 'offerId', 'status', 'issues', 'lastSeen', 'clicks7d', 'impressions7d', 'demand', 'priceVsBenchmark', 'organicImpressions28d', 'organicPosition'] as const;
+export const PRODUCT_ORDER_COLUMNS = ['title', 'offerId', 'brand', 'feedLabel', 'price', 'availability', 'status', 'issues', 'recommendation', 'lastSeen', 'clicks7d', 'impressions7d', 'demand', 'priceVsBenchmark', 'organicImpressions28d', 'organicPosition'] as const;
 
 /** Category used for peer comparison: Google product category (leaf), else first product type. */
 export function productCategory(product: Product): string | null {
@@ -386,6 +394,15 @@ export class ProductStore {
       const like = `%${query.q}%`;
       params.push(like, like, like);
     }
+    const literal = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
+    if (query.offerIdContains) { where.push("p.offer_id LIKE ? ESCAPE '\\'"); params.push(literal(query.offerIdContains)); }
+    if (query.titleContains) { where.push("p.title LIKE ? ESCAPE '\\'"); params.push(literal(query.titleContains)); }
+    if (query.priceMin !== undefined) { where.push('p.price_micros >= ?'); params.push(query.priceMin * 1_000_000); }
+    if (query.issueCount !== undefined) { where.push('p.issue_count = ?'); params.push(query.issueCount); }
+    if (query.clicksMin !== undefined) { where.push('COALESCE(s.mc_clicks_7d, 0) >= ?'); params.push(query.clicksMin); }
+    if (query.priceVsMinPct !== undefined) { where.push('s.price_vs_benchmark >= ?'); params.push(query.priceVsMinPct / 100); }
+    if (query.organicMin !== undefined) { where.push('COALESCE(s.sc_impressions_28d, 0) >= ?'); params.push(query.organicMin); }
+    if (query.seenSince) { where.push('p.last_seen_at >= ?'); params.push(query.seenSince); }
     if (query.status?.length) {
       where.push(`p.aggregated_status IN (${query.status.map(() => '?').join(',')})`);
       params.push(...query.status);
@@ -433,8 +450,13 @@ export class ProductStore {
       {
         title: 'p.title',
         offerId: 'p.offer_id',
+        brand: 'p.brand',
+        feedLabel: 'p.feed_label',
+        price: 'p.price_micros',
+        availability: 'p.availability',
         status: 'p.aggregated_status',
         issues: 'p.issue_count',
+        recommendation: "COALESCE(s.recommendation, 'NO_DATA')",
         lastSeen: 'p.last_seen_at',
         clicks7d: 'COALESCE(s.mc_clicks_7d, 0)',
         impressions7d: 'COALESCE(s.mc_impressions_7d, 0)',

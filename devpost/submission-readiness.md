@@ -18,6 +18,8 @@ This is a technical handoff for preparing the Build With AI Basics submission. I
 
 Use the live demo for the required short video. Keep credentials, server terminals, and unrelated browser tabs out of the recording.
 
+The detailed presenter script is in [`demo-scenario.md`](demo-scenario.md).
+
 1. Open the demo URL and create an administrator account in the setup wizard.
 2. Show the labelled Demo mode and the Product360 dashboard.
 3. Open Products and show the agreed product grid, including status and issue summary.

@@ -9,7 +9,7 @@ details are in [development.md](development.md).
 ## 1. Requirements
 
 | | Minimum | Notes |
-|-|---------|-------|
+| - | --------- | ------- |
 | Node.js | **22.13** or newer | the app uses Node's built-in SQLite (`node:sqlite`) – no native modules, no compiler needed |
 | OS | any Linux VPS, macOS, Windows | scripts in `deploy/` are bash; Docker images are provided |
 | CPU / RAM | 1 vCPU, 512 MB | one Node process; a 10 000-product catalogue with 90 days of metrics uses ≈ 150 MB RAM and < 1 GB disk |
@@ -84,11 +84,13 @@ can also be pasted in the wizard instead).
 Put the app behind a TLS-terminating proxy; Google push notifications require a public HTTPS URL.
 
 * Caddy (`deploy/Caddyfile`, automatic certificates):
-  ```
+  
+  ```plain text
   gmc.example.com {
       reverse_proxy 127.0.0.1:8080
   }
   ```
+
 * nginx: `deploy/nginx.conf` (combine with certbot). The app trusts `X-Forwarded-*` headers
   (`trustProxy: true`).
 
@@ -104,7 +106,7 @@ be set in the browser (setup wizard / Settings) – values stored there live in 
 take precedence; `.env` acts as the default for a fresh database.
 
 | Variable | Default | Purpose |
-|----------|---------|---------|
+| --------- | --------- | --------- |
 | `NODE_ENV` | `development` | `production` enables production logging; warns when `SESSION_SECRET` is the default |
 | `HOST`, `PORT` | `0.0.0.0`, `8080` | bind address |
 | `LOG_LEVEL` | `info` | `fatal … trace`, `silent` |
@@ -269,7 +271,7 @@ separate host name if prospects should reach it. See [demo.md](demo.md).
 ## 7. Troubleshooting
 
 | Symptom | Cause / fix |
-|---------|-------------|
+| --------- | ------------- |
 | `npm audit fix --force` makes the build fail | Do not use the force option on a deployed checkout: it can replace major versions outside the tested lockfiles. Restore the checkout, pull the current revision, then run `npm ci && npm run build`; use `npm audit fix --package-lock-only` only for non-breaking fixes and commit the resulting lockfile. |
 | Wizard: *GCP project … is not registered* | Merchant-API developer registration missing → *Register Google Cloud project* button, wait 5 min. Details in [google-setup.md](google-setup.md#troubleshooting-the-test-connection-messages). |
 | Wizard: *The caller does not have permission* | service account not a user of the account, or Merchant API not enabled in its project. |

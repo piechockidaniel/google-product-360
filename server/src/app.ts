@@ -12,6 +12,7 @@ import { SEARCH_CONSOLE_BASE_URL, SearchConsoleClient, createNotConfiguredSearch
 import { MockSearchConsoleApi } from './mock/mock-search-console.js';
 import { MetricsScheduler } from './jobs/metrics-scheduler.js';
 import { SyncScheduler } from './jobs/sync-scheduler.js';
+import { WooCommerceScheduler } from './jobs/woocommerce-scheduler.js';
 import { MockMerchantApi } from './mock/mock-merchant-api.js';
 import { AccountIssueStore } from './services/account-issue-store.js';
 import { AccountService } from './services/account-service.js';
@@ -29,6 +30,8 @@ import { RemediationService } from './services/remediation-service.js';
 import { SignalsService } from './services/signals-service.js';
 import { CONNECTION_KEYS, SettingsService, type MerchantSettings } from './services/settings-service.js';
 import { SyncService } from './services/sync-service.js';
+import { WooCommerceService } from './services/woocommerce-service.js';
+import { AllegroService } from './services/allegro-service.js';
 import type { Logger } from './util/logger.js';
 import { WorkflowEngine } from './workflows/engine.js';
 import { WorkflowScheduler } from './workflows/scheduler.js';
@@ -50,6 +53,9 @@ export interface AppContext {
   products: ProductStore;
   accountIssues: AccountIssueStore;
   sync: SyncService;
+  woocommerce: WooCommerceService;
+  wooScheduler: WooCommerceScheduler;
+  allegro: AllegroService;
   syncScheduler: SyncScheduler;
   enrichment: EnrichmentService;
   feeds: FeedService;
@@ -106,6 +112,9 @@ export function buildApp(config: AppConfig, logger: Logger, options: BuildOption
   const auth = new AuthService(db, config.SESSION_TTL_HOURS);
   const oauth = new GoogleOAuthService(config.GOOGLE_OAUTH_CLIENT_ID, config.GOOGLE_OAUTH_CLIENT_SECRET, config.GOOGLE_OAUTH_REDIRECT_URI);
   const events = new EventLog(db);
+  const woocommerce = new WooCommerceService(db, settings, events, options.fetchImpl);
+  const wooScheduler = new WooCommerceScheduler(woocommerce, settings.current().wooSyncIntervalMinutes, logger);
+  const allegro = new AllegroService(db, config.SESSION_SECRET, events, woocommerce, options.fetchImpl);
   const products = new ProductStore(db);
   const accountIssues = new AccountIssueStore(db);
   const sync = new SyncService(db, api, products, accountIssues, events, logger);
@@ -185,6 +194,7 @@ export function buildApp(config: AppConfig, logger: Logger, options: BuildOption
     }
     if (changed.includes('enrichmentDataSourceName') || changed.includes('enrichmentPriority')) enrichment.resetCache();
     if (changed.includes('syncIntervalMinutes')) syncScheduler.reconfigure(next.syncIntervalMinutes);
+    if (changed.includes('wooSyncIntervalMinutes')) wooScheduler.reconfigure(next.wooSyncIntervalMinutes);
     if (changed.includes('metricsEnabled') || changed.includes('metricsSyncCron') || changed.includes('timeZone')) {
       metricsScheduler.reconfigure({ enabled: next.metricsEnabled, cron: next.metricsSyncCron, timezone: next.timeZone });
     }
@@ -229,6 +239,9 @@ export function buildApp(config: AppConfig, logger: Logger, options: BuildOption
     products,
     accountIssues,
     sync,
+    woocommerce,
+    wooScheduler,
+    allegro,
     syncScheduler,
     enrichment,
     feeds,
@@ -249,17 +262,22 @@ export function buildApp(config: AppConfig, logger: Logger, options: BuildOption
     async start() {
       workflows.failStaleRuns();
       metrics.failStaleRuns();
+      woocommerce.failStaleRuns();
+      allegro.recoverStaleOperations();
       auth.pruneExpiredSessions();
       auth.pruneOAuthStates();
       scheduler.start();
       remediations.start();
       syncScheduler.start(settings.current().syncOnStartup);
+      wooScheduler.start(settings.current().wooSyncOnStartup);
       metricsScheduler.start(settings.current().syncOnStartup);
     },
     async stop() {
       scheduler.stop();
       remediations.stop();
       syncScheduler.stop();
+      wooScheduler.stop();
+      await woocommerce.shutdown();
       metricsScheduler.stop();
       db.close();
     },

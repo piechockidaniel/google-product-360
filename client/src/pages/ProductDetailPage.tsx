@@ -10,18 +10,18 @@ import AttributeForm from '../components/AttributeForm';
 import Product360Panel from '../components/Product360Panel';
 import { RecommendationBadge } from '../components/signals';
 
-export default function ProductDetailPage({ embedded = false, productId, onClose }: { embedded?: boolean; productId?: string; onClose?: () => void }) {
+export default function ProductDetailPage({ embedded = false, productId, initialTab = 'p360', onClose }: { embedded?: boolean; productId?: string; initialTab?: 'p360' | 'issues'; onClose?: () => void }) {
   const route = useParams();
   const id = productId ?? route.id ?? '';
   const notify = useToast();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { formatDate, formatPrice, timeAgo } = useFormat();
   const product = useAsync(() => api.get<ProductDetails>(`/api/products/${id}`), [id]);
   const facets = useAsync(() => api.get<Facets>('/api/products/facets'), []);
   const rendered = useAsync(() => api.get<{ issues: RenderedIssue[] }>(`/api/products/${id}/rendered-issues`).catch(() => ({ issues: [] as RenderedIssue[] })), [id]);
   const history = useAsync(() => api.get<{ issues: ProductIssue[]; events: AppEvent[] }>(`/api/products/${id}/history`), [id, product.data?.lastSeenAt]);
   const remediations = useAsync(() => api.get<{ proposals: RemediationProposal[]; operations: RemediationOperation[] }>(`/api/products/${id}/remediations`), [id, product.data?.lastSeenAt]);
-  const [tab, setTab] = useState<'p360' | 'issues' | 'attributes' | 'enrich' | 'history' | 'raw'>('p360');
+  const [tab, setTab] = useState<'p360' | 'issues' | 'attributes' | 'enrich' | 'history' | 'raw'>(initialTab);
   /** Search query picked on the 360° tab – pre-fills the title in the enrichment form. */
   const [titleIdea, setTitleIdea] = useState<string | null>(null);
   const [remediationBusy, setRemediationBusy] = useState<string | null>(null);
@@ -44,6 +44,20 @@ export default function ProductDetailPage({ embedded = false, productId, onClose
   if (product.error || !product.data) return <ErrorBox error={product.error ?? '404'} onRetry={product.reload} />;
   const p = product.data;
   const attrs = p.product.productAttributes ?? {};
+
+  const applyQuickFix = async (proposal: RemediationProposal) => {
+    if (!window.confirm(t('detail.quickFixConfirm', { value: proposal.proposedValue }))) return;
+    setRemediationBusy(proposal.issueCode);
+    try {
+      await api.post(`/api/products/${p.productId}/remediations`, { issueCode: proposal.issueCode });
+      notify(t('detail.quickFixQueued'), 'info');
+      await remediations.reload();
+    } catch (err) {
+      notify((err as Error).message, 'error');
+    } finally {
+      setRemediationBusy(null);
+    }
+  };
 
   const refresh = async () => {
     try {
@@ -89,6 +103,15 @@ export default function ProductDetailPage({ embedded = false, productId, onClose
           </button>
         </div>
       </header>
+
+      {p.woocommerce && <Card title={lang === 'pl' ? 'Powiązany produkt WooCommerce' : 'Linked WooCommerce product'}>
+        {p.woocommerce.present ? <>
+          <p className="muted small">{lang === 'pl' ? 'Migawka sklepu; poniższe dane Google nadal są używane w widokach i automatyzacjach.' : 'Store snapshot; the Google data below is still used by product views and workflows.'}</p>
+          <div className="small">Woo ID: {p.woocommerce.wooId} · SKU: {p.woocommerce.sku || '–'} · {p.woocommerce.name || '–'}</div>
+          <div className="small">{lang === 'pl' ? 'Cena sklepu' : 'Store price'}: {p.woocommerce.price ?? '–'} · {lang === 'pl' ? 'Dostępność' : 'Stock'}: {p.woocommerce.stockStatus ?? '–'}{p.woocommerce.stockQuantity !== null ? ` (${p.woocommerce.stockQuantity})` : ''}</div>
+          <div className="muted small">{lang === 'pl' ? 'Synchronizacja' : 'Synced'}: {formatDate(p.woocommerce.syncedAt)}</div>
+        </> : <p>{lang === 'pl' ? 'Powiązany produkt nie występuje w ostatniej migawce WooCommerce.' : 'The linked product is missing from the latest WooCommerce snapshot.'}</p>}
+      </Card>}
 
       <div className="grid-3 info-grid">
         <div>
@@ -151,14 +174,21 @@ export default function ProductDetailPage({ embedded = false, productId, onClose
       </div>
 
       {tab === 'p360' && (
-        <Product360Panel
-          productId={id}
-          onTitleIdea={(query) => {
-            setTitleIdea(query);
-            setTab('enrich');
-            notify(t('p360.titleIdeaApplied', { query }), 'ok');
-          }}
-        />
+        <>
+          {remediations.data?.proposals.map((proposal) => (
+            <Card key={proposal.issueCode} title={t('detail.quickFixAvailable')} className="quick-fix-overview">
+              <QuickFixAction proposal={proposal} busy={remediationBusy === proposal.issueCode} onApply={() => applyQuickFix(proposal)} />
+            </Card>
+          ))}
+          <Product360Panel
+            productId={id}
+            onTitleIdea={(query) => {
+              setTitleIdea(query);
+              setTab('enrich');
+              notify(t('p360.titleIdeaApplied', { query }), 'ok');
+            }}
+          />
+        </>
       )}
 
       {tab === 'issues' && (
@@ -196,19 +226,7 @@ export default function ProductDetailPage({ embedded = false, productId, onClose
                         <QuickFixAction
                           proposal={proposal}
                           busy={remediationBusy === i.code}
-                          onApply={async () => {
-                            if (!window.confirm(t('detail.quickFixConfirm', { value: proposal.proposedValue }))) return;
-                            setRemediationBusy(i.code);
-                            try {
-                              await api.post(`/api/products/${p.productId}/remediations`, { issueCode: i.code });
-                              notify(t('detail.quickFixQueued'), 'info');
-                              await remediations.reload();
-                            } catch (err) {
-                              notify((err as Error).message, 'error');
-                            } finally {
-                              setRemediationBusy(null);
-                            }
-                          }}
+                          onApply={() => applyQuickFix(proposal)}
                         />
                       );
                     })()}

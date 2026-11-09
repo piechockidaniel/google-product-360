@@ -22,7 +22,7 @@ UI in Polish and English.
 ## Documentation
 
 | Audience | Document | What you find there |
-|----------|----------|---------------------|
+| ---------- | ---------- | --------------------- |
 | Everyone | [docs/user-guide.md](docs/user-guide.md) | Every screen explained: dashboard, products & the 360° view, issues, market, feeds, workflows (builder, triggers, steps, templates), activity, settings; what the recommendations mean and how they are computed |
 | Whoever installs / runs an instance | [docs/operations.md](docs/operations.md) | Requirements, installation (one-command deploy, pm2 / systemd, Docker), configuration reference, Google-side setup for Merchant Center and Search Console, reverse proxy, backups, updates, monitoring, troubleshooting |
 | Whoever installs / runs an instance | [docs/google-setup.md](docs/google-setup.md) | Step-by-step walkthrough of the Google Cloud + Merchant Center side (service account, developer registration) with screenshots-level detail |

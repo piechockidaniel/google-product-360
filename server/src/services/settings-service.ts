@@ -28,6 +28,11 @@ export const merchantSettingsSchema = z.object({
   publicUrl: z.string().url().nullable().default(null),
   webhookSecret: z.string().min(8).default('change-me-webhook-secret'),
   setupCompletedAt: z.string().nullable().default(null),
+  wooStoreUrl: z.string().trim().default(''),
+  wooConsumerKey: z.string().default(''),
+  wooConsumerSecret: z.string().default(''),
+  wooSyncIntervalMinutes: z.number().int().min(0).max(1440).default(0),
+  wooSyncOnStartup: z.boolean().default(false),
 
   // ---- Product360 metrics & signals
   /** Pull performance / market reports and compute recommendations. */
@@ -58,7 +63,7 @@ export const merchantSettingsSchema = z.object({
 export type MerchantSettings = z.infer<typeof merchantSettingsSchema>;
 export type MerchantSettingsPatch = Partial<MerchantSettings>;
 
-const SECRET_KEYS: (keyof MerchantSettings)[] = ['serviceAccountJson'];
+const SECRET_KEYS: (keyof MerchantSettings)[] = ['serviceAccountJson', 'wooConsumerKey', 'wooConsumerSecret'];
 /** Keys that require the Merchant API client to be rebuilt. */
 export const CONNECTION_KEYS: (keyof MerchantSettings)[] = ['mock', 'merchantAccountId', 'serviceAccountJson', 'apiBaseUrl', 'apiVersion'];
 
@@ -69,8 +74,9 @@ export interface ServiceAccountSummary {
 }
 
 /** What the API exposes: secrets are replaced by a summary. */
-export interface PublicSettings extends Omit<MerchantSettings, 'serviceAccountJson'> {
+export interface PublicSettings extends Omit<MerchantSettings, 'serviceAccountJson' | 'wooConsumerKey' | 'wooConsumerSecret'> {
   serviceAccount: ServiceAccountSummary | null;
+  wooCredentialsConfigured: boolean;
   configured: boolean;
   /** which keys currently come from the environment instead of the database */
   fromEnvironment: (keyof MerchantSettings)[];
@@ -120,7 +126,7 @@ export class SettingsService {
   }
 
   publicView(): PublicSettings {
-    const { serviceAccountJson, ...rest } = this.cache;
+    const { serviceAccountJson, wooConsumerKey, wooConsumerSecret, ...rest } = this.cache;
     let serviceAccount: ServiceAccountSummary | null = null;
     if (serviceAccountJson) {
       try {
@@ -132,6 +138,7 @@ export class SettingsService {
     return {
       ...rest,
       serviceAccount,
+      wooCredentialsConfigured: !!wooConsumerKey && !!wooConsumerSecret,
       configured: this.isConfigured(),
       fromEnvironment: (Object.keys(this.cache) as (keyof MerchantSettings)[]).filter((k) => !this.stored.has(k) && this.envValue(k) !== undefined),
     };

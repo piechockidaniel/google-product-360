@@ -1,7 +1,7 @@
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import { LanguageSwitcher, useT } from './lib/i18n';
-import { Badge, Spinner } from './components/ui';
+import { Badge, HealthDot, Spinner } from './components/ui';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
@@ -14,10 +14,14 @@ import ActivityPage from './pages/ActivityPage';
 import MarketPage from './pages/MarketPage';
 import SettingsPage from './pages/SettingsPage';
 import SetupWizardPage from './pages/SetupWizardPage';
+import WooCommercePage from './pages/WooCommercePage';
+import AllegroPage from './pages/AllegroPage';
 
 const NAV = [
   { to: '/', key: 'nav.dashboard', icon: '▦', end: true },
   { to: '/products', key: 'nav.products', icon: '▤' },
+  { to: '/woocommerce', key: 'nav.woocommerce', icon: '▣' },
+  { to: '/allegro', key: 'nav.allegro', icon: '▥' },
   { to: '/issues', key: 'nav.issues', icon: '⚠' },
   { to: '/market', key: 'nav.market', icon: '◔' },
   { to: '/feeds', key: 'nav.feeds', icon: '⇅' },
@@ -51,13 +55,23 @@ export default function App() {
   }
   if (location.pathname === '/setup') return <SetupWizardPage />;
 
+  const activeNav = NAV.find((item) => ('end' in item && item.end ? location.pathname === item.to : location.pathname.startsWith(item.to))) ?? NAV[0];
+
   return (
     <div className="layout">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-title">{t('app.name')}</div>
+          <div className="brand-lockup">
+            <span className="brand-mark">360</span>
+            <div>
+              <div className="brand-title">
+                Product<span>360</span>
+              </div>
+              <div className="brand-subtitle">{t('app.name')}</div>
+            </div>
+          </div>
           <div className="brand-sub">
-            {accountId ? t('nav.account', { id: accountId }) : ''}
+            {accountId ? t('nav.account', { id: accountId }) : t('app.tagline')}
             {mock && (
               <Badge tone="warning" title={t('common.mockTitle')}>
                 {t('common.mock')}
@@ -89,10 +103,31 @@ export default function App() {
         </div>
       </aside>
       <main className="content">
+        <header className="topbar">
+          <div className="breadcrumbs">
+            <span className="muted">{t('app.name')}</span>
+            <span className="breadcrumb-separator">/</span>
+            <strong>{t(activeNav.key)}</strong>
+          </div>
+          <div className="topbar-actions">
+            <div className="connection-pill">
+              <HealthDot health={configured ? 'ok' : 'warning'} />
+              <span>{configured ? t('app.liveSynced') : t('app.setupRequired')}</span>
+            </div>
+            {accountId && <span className="topbar-account">{accountId}</span>}
+            <LanguageSwitcher compact />
+            <div className="user-chip" title={user.username}>
+              <span className="user-avatar">{user.username.slice(0, 2).toUpperCase()}</span>
+              <span className="user-name">{user.username}</span>
+            </div>
+          </div>
+        </header>
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/products/:id" element={<ProductDetailPage />} />
+          <Route path="/woocommerce" element={<WooCommercePage />} />
+          <Route path="/allegro" element={<AllegroPage />} />
           <Route path="/issues" element={<IssuesPage />} />
           <Route path="/market" element={<MarketPage />} />
           <Route path="/feeds" element={<FeedsPage />} />

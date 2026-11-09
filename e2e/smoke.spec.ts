@@ -59,6 +59,39 @@ test.describe('Product360 demo – smoke', () => {
     await expect(page.locator('input[value*=" "]').first()).toBeVisible();
   });
 
+  test('product table scrolls horizontally and keeps actions visible', async ({ page }) => {
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await page.goto('/products');
+    const scroll = page.locator('.products-table-scroll');
+    const action = scroll.locator('tbody tr').first().locator('.actions button');
+    await expect(action).toBeVisible();
+    const dimensions = await scroll.evaluate((element) => ({ width: element.clientWidth, content: element.scrollWidth }));
+    expect(dimensions.content).toBeGreaterThan(dimensions.width);
+    const bounds = await scroll.boundingBox();
+    const button = await action.boundingBox();
+    expect(bounds && button).toBeTruthy();
+    expect(button!.x + button!.width).toBeLessThanOrEqual(bounds!.x + bounds!.width + 1);
+    await scroll.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+    expect(await scroll.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  });
+
+  test('WooCommerce page shows match diagnostics and orders', async ({ page }) => {
+    await page.route('**/api/woocommerce/reconciliation**', async (route) => route.fulfill({ json: {
+      syncedAt: '2026-11-09T00:00:00Z', summary: { matched: 1, ambiguous: 1, unmatched: 0, no_sku: 0, merchantOnly: 0 }, total: 2,
+      items: [
+        { wooId: 1, parentId: null, sku: 'SKU1', name: 'Store product', type: 'simple', price: '10', stockStatus: 'instock', status: 'matched', candidates: [{ productId: 'encoded', offerId: 'SKU1', title: 'Google product', mappedWooId: null }] },
+        { wooId: 2, parentId: null, sku: 'SKU2', name: 'Duplicate', type: 'simple', price: '', stockStatus: 'instock', status: 'ambiguous', candidates: [] },
+      ],
+    } }));
+    await page.route('**/api/woocommerce/orders**', async (route) => route.fulfill({ json: { total: 1, items: [{ id: 42, number: '42', status: 'processing', total: '10.00', currency: 'PLN', line_items: [{ id: 1, name: 'Store product', quantity: 1 }] }] } }));
+    await page.goto('/woocommerce');
+    await expect(page.getByRole('heading', { name: 'Product matching' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'SKU1' })).toHaveAttribute('href', '/products/encoded');
+    await expect(page.getByRole('row', { name: /Duplicate/ })).toContainText('Ambiguous');
+    await expect(page.getByRole('row', { name: /processing/ })).toContainText('10.00');
+    await expect(page.getByRole('row', { name: /processing/ })).toContainText('PLN');
+  });
+
   test('market page lists best sellers including items not carried', async ({ page }) => {
     await page.goto('/market?carried=false');
     await expect(page.getByRole('heading', { name: 'Market' })).toBeVisible();

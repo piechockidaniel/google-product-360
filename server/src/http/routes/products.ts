@@ -12,6 +12,14 @@ const csv = <T extends z.ZodTypeAny>(schema: T): z.ZodType<z.infer<T>[] | undefi
 
 const listQuerySchema = z.object({
   q: z.string().optional(),
+  offerIdContains: z.string().trim().max(200).optional(),
+  titleContains: z.string().trim().max(200).optional(),
+  priceMin: z.coerce.number().finite().min(0).optional(),
+  issueCount: z.coerce.number().int().min(0).optional(),
+  clicksMin: z.coerce.number().int().min(0).optional(),
+  priceVsMinPct: z.coerce.number().finite().optional(),
+  organicMin: z.coerce.number().int().min(0).optional(),
+  seenSince: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   status: csv(z.enum(['APPROVED', 'PARTIALLY_APPROVED', 'DISAPPROVED', 'PENDING', 'NOT_ELIGIBLE', 'UNKNOWN'])),
   severity: csv(z.enum(['error', 'warning', 'info'])),
   issueCode: z.string().optional(),
@@ -75,7 +83,7 @@ export function registerProductRoutes(app: FastifyInstance, ctx: AppContext): vo
   app.get<{ Params: { id: string } }>('/products/:id', async (request) => {
     const product = ctx.products.getProductByEncodedId(request.params.id);
     if (!product) throw notFound('Product not found in local snapshot');
-    return product;
+    return { ...product, woocommerce: ctx.woocommerce.sourceForGoogle(product.name) };
   });
 
   /** Product360: everything we know about one product (metrics, market, signal). */
@@ -101,7 +109,7 @@ export function registerProductRoutes(app: FastifyInstance, ctx: AppContext): vo
   app.post<{ Params: { id: string } }>('/products/:id/refresh', async (request) => {
     const product = await ctx.sync.refreshProduct(decodeProductId(request.params.id), 'manual');
     if (!product) throw notFound('Product not found');
-    return product;
+    return { ...product, woocommerce: ctx.woocommerce.sourceForGoogle(product.name) };
   });
 
   /** Rendered (human readable, with resolution actions) issues from the issue resolution API. */

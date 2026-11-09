@@ -11,6 +11,7 @@ import { Delta } from '../components/charts';
 import { RecommendationBadge, formatPct } from '../components/signals';
 import { RECOMMENDATIONS } from '../lib/types';
 import ProductDetailPage from './ProductDetailPage';
+import SortableHeader from '../components/SortableHeader';
 
 const STATUSES = ['APPROVED', 'PARTIALLY_APPROVED', 'DISAPPROVED', 'PENDING', 'NOT_ELIGIBLE', 'UNKNOWN'];
 const LIMIT = 50;
@@ -18,15 +19,24 @@ const LIMIT = 50;
 export default function ProductsPage() {
   const [params, setParams] = useSearchParams();
   const notify = useToast();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { formatPrice, timeAgo } = useFormat();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailTab, setDetailTab] = useState<'p360' | 'issues'>('p360');
 
   const query = useMemo(
     () => ({
       q: params.get('q') ?? '',
+      offerIdContains: params.get('offerIdContains') ?? '',
+      titleContains: params.get('titleContains') ?? '',
+      priceMin: params.get('priceMin') ?? '',
+      issueCount: params.get('issueCount') ?? '',
+      clicksMin: params.get('clicksMin') ?? '',
+      priceVsMinPct: params.get('priceVsMinPct') ?? '',
+      organicMin: params.get('organicMin') ?? '',
+      seenSince: params.get('seenSince') ?? '',
       status: params.get('status') ?? '',
       severity: params.get('severity') ?? '',
       issueCode: params.get('issueCode') ?? '',
@@ -70,7 +80,8 @@ export default function ProductsPage() {
     if (query.orderBy === column) update({ orderDir: query.orderDir === 'asc' ? 'desc' : 'asc' });
     else update({ orderBy: column, orderDir: 'asc' });
   };
-  const sortIcon = (column: string) => (query.orderBy === column ? (query.orderDir === 'asc' ? ' ▲' : ' ▼') : '');
+  const heading = (column: string, label: string) => <SortableHeader label={label} active={query.orderBy === column} direction={query.orderDir === 'desc' ? 'desc' : 'asc'} onSort={() => sortBy(column)} />;
+  const filterLabel = (label: string) => `${lang === 'pl' ? 'Filtruj' : 'Filter'}: ${label}`;
   const signals = facets.data?.signalsComputed ?? false;
 
   return (
@@ -183,54 +194,57 @@ export default function ProductsPage() {
       <ErrorBox error={products.error} onRetry={products.reload} />
       {products.loading && !products.data ? (
         <Spinner />
-      ) : !products.data?.items.length ? (
+      ) : !products.data ? (
         <Empty>{t('products.empty')}</Empty>
       ) : (
-        <Card>
+        <Card className="products-results">
+          <div className="products-table-scroll" role="region" aria-label={t('nav.products')} tabIndex={0}>
           <table className="table table-products">
             <thead>
               <tr>
                 <th>
-                  <input type="checkbox" checked={products.data.items.every((p) => selected.has(p.productId))} onChange={toggleAll} />
+                  <input type="checkbox" checked={products.data.items.length > 0 && products.data.items.every((p) => selected.has(p.productId))} onChange={toggleAll} />
                 </th>
                 <th></th>
-                <th className="sortable" onClick={() => sortBy('offerId')}>
-                  {t('products.offerId')}{sortIcon('offerId')}
-                </th>
-                <th className="sortable" onClick={() => sortBy('title')}>
-                  {t('products.titleCol')}{sortIcon('title')}
-                </th>
-                <th>{t('products.brand')}</th>
-                <th>{t('products.feed')}</th>
-                <th>{t('products.price')}</th>
-                <th>{t('products.availability')}</th>
-                <th className="sortable" onClick={() => sortBy('status')}>
-                  {t('common.status')}{sortIcon('status')}
-                </th>
-                <th className="sortable num" onClick={() => sortBy('issues')}>
-                  {t('common.issues')}{sortIcon('issues')}
-                </th>
+                {heading('offerId', t('products.offerId'))}
+                {heading('title', t('products.titleCol'))}
+                {heading('brand', t('products.brand'))}
+                {heading('feedLabel', t('products.feed'))}
+                {heading('price', t('products.price'))}
+                {heading('availability', t('products.availability'))}
+                {heading('status', t('common.status'))}
+                {heading('issues', t('common.issues'))}
                 {signals && (
                   <>
-                    <th className="sortable" onClick={() => sortBy('demand')}>
-                      {t('p360.recommendation')}{sortIcon('demand')}
-                    </th>
-                    <th className="sortable num" onClick={() => sortBy('clicks7d')}>
-                      {t('p360.clicks7d')}{sortIcon('clicks7d')}
-                    </th>
-                    <th className="sortable num" onClick={() => sortBy('priceVsBenchmark')}>
-                      {t('p360.price')}{sortIcon('priceVsBenchmark')}
-                    </th>
+                    {heading('recommendation', t('p360.recommendation'))}
+                    {heading('clicks7d', t('p360.clicks7d'))}
+                    {heading('priceVsBenchmark', t('p360.price'))}
                     {facets.data?.searchConsoleEnabled && (
-                      <th className="sortable num" onClick={() => sortBy('organicImpressions28d')}>
-                        {t('p360.organicCol')}{sortIcon('organicImpressions28d')}
-                      </th>
+                      heading('organicImpressions28d', t('p360.organicCol'))
                     )}
                   </>
                 )}
-                <th className="sortable" onClick={() => sortBy('lastSeen')}>
-                  {t('products.seen')}{sortIcon('lastSeen')}
-                </th>
+                {heading('lastSeen', t('products.seen'))}
+                <th className="actions">{t('products.actions')}</th>
+              </tr>
+              <tr className="table-filter-row">
+                <th /><th />
+                <th><input aria-label={filterLabel(t('products.offerId'))} value={query.offerIdContains} onChange={(e) => update({ offerIdContains: e.target.value })} /></th>
+                <th><input aria-label={filterLabel(t('products.titleCol'))} value={query.titleContains} onChange={(e) => update({ titleContains: e.target.value })} /></th>
+                <th><select aria-label={filterLabel(t('products.brand'))} value={query.brand} onChange={(e) => update({ brand: e.target.value })}><option value="">{t('products.anyBrand')}</option>{facets.data?.brands.map((brand) => <option key={brand} value={brand}>{brand}</option>)}</select></th>
+                <th><select aria-label={filterLabel(t('products.feed'))} value={query.feedLabel} onChange={(e) => update({ feedLabel: e.target.value })}><option value="">{t('products.anyFeedLabel')}</option>{facets.data?.feedLabels.map((feed) => <option key={feed} value={feed}>{feed}</option>)}</select></th>
+                <th><input type="number" min="0" step="0.01" aria-label={filterLabel(t('products.price'))} placeholder="≥" value={query.priceMin} onChange={(e) => update({ priceMin: e.target.value })} /></th>
+                <th><select aria-label={filterLabel(t('products.availability'))} value={query.availability} onChange={(e) => update({ availability: e.target.value })}><option value="">{t('products.anyAvailability')}</option>{facets.data?.availability.map((value) => <option key={value} value={value}>{value}</option>)}</select></th>
+                <th><select aria-label={filterLabel(t('common.status'))} value={query.status} onChange={(e) => update({ status: e.target.value })}><option value="">{t('products.anyStatus')}</option>{STATUSES.map((value) => <option key={value} value={value}>{t(`status.${value}` as 'status.APPROVED')}</option>)}</select></th>
+                <th><input type="number" min="0" step="1" aria-label={filterLabel(t('common.issues'))} value={query.issueCount} onChange={(e) => update({ issueCount: e.target.value })} /></th>
+                {signals && <>
+                  <th><select aria-label={filterLabel(t('p360.recommendation'))} value={query.recommendation} onChange={(e) => update({ recommendation: e.target.value })}><option value="">{t('products.anyRecommendation')}</option>{RECOMMENDATIONS.map((value) => <option key={value} value={value}>{t(`reco.${value}` as 'reco.SCALE')}</option>)}</select></th>
+                  <th><input type="number" min="0" step="1" aria-label={filterLabel(t('p360.clicks7d'))} placeholder="≥" value={query.clicksMin} onChange={(e) => update({ clicksMin: e.target.value })} /></th>
+                  <th><input type="number" step="1" aria-label={filterLabel(t('p360.price'))} placeholder="≥ %" value={query.priceVsMinPct} onChange={(e) => update({ priceVsMinPct: e.target.value })} /></th>
+                  {facets.data?.searchConsoleEnabled && <th><input type="number" min="0" step="1" aria-label={filterLabel(t('p360.organicCol'))} placeholder="≥" value={query.organicMin} onChange={(e) => update({ organicMin: e.target.value })} /></th>}
+                </>}
+                <th><input type="date" aria-label={filterLabel(t('products.seen'))} value={query.seenSince} onChange={(e) => update({ seenSince: e.target.value })} /></th>
+                <th className="actions" />
               </tr>
             </thead>
             <tbody>
@@ -250,10 +264,10 @@ export default function ProductsPage() {
                   </td>
                   <td>{p.imageLink ? <img className="thumb" src={p.imageLink} alt="" loading="lazy" onError={(e) => e.currentTarget.classList.add('thumb-hidden')} /> : <span className="thumb thumb-empty" />}</td>
                   <td>
-                    <Link to={`/products/${p.productId}`} onClick={(e) => { if (!e.metaKey && !e.ctrlKey && e.button === 0) { e.preventDefault(); setDetailId(p.productId); } }}>{p.offerId}</Link>
+                    <Link to={`/products/${p.productId}`} onClick={(e) => { if (!e.metaKey && !e.ctrlKey && e.button === 0) { e.preventDefault(); setDetailTab('p360'); setDetailId(p.productId); } }}>{p.offerId}</Link>
                   </td>
                   <td>
-                    <Link to={`/products/${p.productId}`} onClick={(e) => { if (!e.metaKey && !e.ctrlKey && e.button === 0) { e.preventDefault(); setDetailId(p.productId); } }}>{p.title ?? <span className="muted">{t('products.noTitle')}</span>}</Link>
+                    <Link to={`/products/${p.productId}`} onClick={(e) => { if (!e.metaKey && !e.ctrlKey && e.button === 0) { e.preventDefault(); setDetailTab('p360'); setDetailId(p.productId); } }}>{p.title ?? <span className="muted">{t('products.noTitle')}</span>}</Link>
                   </td>
                   <td className="muted">{p.brand ?? '–'}</td>
                   <td className="muted">
@@ -283,10 +297,36 @@ export default function ProductsPage() {
                     </>
                   )}
                   <td className="muted small">{timeAgo(p.lastSeenAt)}</td>
+                  <td className="actions">
+                    {p.issueCount > 0 ? (
+                      <button
+                        className={`btn btn-sm ${p.signal?.recommendation === 'FIX' ? 'btn-primary' : ''}`}
+                        title={t('products.fixHint')}
+                        onClick={() => {
+                          setDetailTab('issues');
+                          setDetailId(p.productId);
+                        }}
+                      >
+                        {p.signal?.recommendation === 'FIX' ? t('products.fix') : t('products.viewIssues')}
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          setDetailTab('p360');
+                          setDetailId(p.productId);
+                        }}
+                      >
+                        {t('products.view')}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
+          {!products.data.items.length && <Empty>{t('products.empty')}</Empty>}
           <Pagination total={products.data.total} limit={LIMIT} offset={query.offset} onChange={(offset) => update({ offset: String(offset) })} />
         </Card>
       )}
@@ -317,7 +357,7 @@ export default function ProductsPage() {
       {detailId && (
         <div className="detail-drawer-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setDetailId(null); }}>
           <aside className="detail-drawer" aria-label={t('detail.close')}>
-            <ProductDetailPage embedded productId={detailId} onClose={() => setDetailId(null)} />
+            <ProductDetailPage key={`${detailId}-${detailTab}`} embedded productId={detailId} initialTab={detailTab} onClose={() => setDetailId(null)} />
           </aside>
         </div>
       )}
